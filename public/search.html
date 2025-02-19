@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
     <style>
         body { font-family: 'Open Sans', sans-serif; padding: 20px; }
-        .search-container { max-width: 600px; margin: 0 auto; }
+        .search-container { max-width: 600px; margin: 0 auto; text-align: center; }
         .mui-btn { width: 100%; }
         .results-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .result-card { width: 30%; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); }
@@ -16,6 +16,8 @@
     </style>
 </head>
 <body>
+
+<div id="app">
     <div class="search-container">
         <h1>Buscar en transcripciones</h1>
         <div class="mui-textfield">
@@ -28,9 +30,9 @@
         <h2>Resultados ({{ totalResults }})</h2>
         <p>Mostrando {{ startResult }} - {{ endResult }} de {{ totalResults }}</p>
         <div class="results-container">
-            <div class="result-card" v-for="hit in searchResults">
+            <div class="result-card" v-for="hit in searchResults" :key="hit._id">
                 <strong>{{ hit._source.title }} - {{ hit._source.author }}</strong>
-                <p>📌 {{ formatTime(hit.timestamp) }} {{ highlightText(hit.highlight.text[0]) }}</p>
+                <p>📌 {{ formatTime(hit.timestamp) }} <span v-html="highlightText(hit.highlight.text[0])"></span></p>
                 <p>🎥 <a :href="generateYouTubeLink(hit._source.url_youtube, hit.timestamp)" target="_blank">Ver en YouTube ⏳ ({{ formatTime(hit.timestamp) }})</a></p>
             </div>
         </div>
@@ -40,58 +42,61 @@
             <button v-if="searchOffset + 9 < totalResults" class="mui-btn mui-btn--raised" v-on:click="nextPage">SIGUIENTE ➡</button>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script>
-        new Vue({
-            el: '.search-container',
-            data: {
-                searchTerm: '',
-                searchResults: [],
-                totalResults: 0,
-                searchOffset: 0
-            },
-            computed: {
-                startResult() { return this.searchOffset + 1; },
-                endResult() { return Math.min(this.searchOffset + 9, this.totalResults); }
-            },
-            methods: {
-                async performSearch() {
-                    if (!this.searchTerm.trim()) return;
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            searchTerm: '',
+            searchResults: [],
+            totalResults: 0,
+            searchOffset: 0
+        },
+        computed: {
+            startResult() { return this.searchOffset + 1; },
+            endResult() { return Math.min(this.searchOffset + 9, this.totalResults); }
+        },
+        methods: {
+            async performSearch() {
+                if (!this.searchTerm.trim()) return;
+                try {
                     const response = await axios.get(`/search`, { params: { term: this.searchTerm, offset: this.searchOffset } });
                     this.searchResults = response.data.hits;
                     this.totalResults = response.data.total.value;
-                },
-                prevPage() { this.searchOffset -= 9; this.performSearch(); },
-                nextPage() { this.searchOffset += 9; this.performSearch(); },
-                extractTime(text) {
-                    const timeMatch = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-                    if (timeMatch) {
-                        let hours = timeMatch[3] ? parseInt(timeMatch[1], 10) : 0;
-                        let minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10);
-                        let seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10);
-                        return hours * 3600 + minutes * 60 + seconds;
-                    }
-                    return 0;
-                },
-                formatTime(seconds) {
-                    let h = Math.floor(seconds / 3600);
-                    let m = Math.floor((seconds % 3600) / 60);
-                    let s = seconds % 60;
-                    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
-                },
-                cleanText(text) {
-                    return text.replace(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*/, '');
-                },
-                generateYouTubeLink(url, seconds) {
-                    return `${url}&t=${seconds}s`;
-                },
-                highlightText(text) {
-                    return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>');
+                } catch (error) {
+                    console.error("Error en la búsqueda:", error);
                 }
+            },
+            prevPage() { this.searchOffset -= 9; this.performSearch(); },
+            nextPage() { this.searchOffset += 9; this.performSearch(); },
+            extractTime(text) {
+                const timeMatch = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+                if (timeMatch) {
+                    let hours = timeMatch[3] ? parseInt(timeMatch[1], 10) : 0;
+                    let minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10);
+                    let seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10);
+                    return hours * 3600 + minutes * 60 + seconds;
+                }
+                return 0;
+            },
+            formatTime(seconds) {
+                let h = Math.floor(seconds / 3600);
+                let m = Math.floor((seconds % 3600) / 60);
+                let s = seconds % 60;
+                return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
+            },
+            generateYouTubeLink(url, seconds) {
+                return `${url}&t=${seconds}s`;
+            },
+            highlightText(text) {
+                return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>');
             }
-        });
-    </script>
+        }
+    });
+</script>
+
 </body>
 </html>
