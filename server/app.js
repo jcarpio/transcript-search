@@ -14,7 +14,7 @@ const router = new Router();
 // 📌 Servir archivos estáticos desde la carpeta 'public'
 app.use(serve(path.join(__dirname, '../public')));
 
-// Log each request to the console
+// 📌 Middleware para logging de cada request
 app.use(async (ctx, next) => {
   const start = Date.now();
   await next();
@@ -22,15 +22,15 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.method} ${ctx.url} - ${ms}ms`);
 });
 
-// Log percolated errors to the console
+// 📌 Manejo de errores global
 app.on('error', err => {
   console.error('Server Error', err);
 });
 
-// Set permissive CORS header
+// 📌 Habilitar CORS
 app.use(async (ctx, next) => {
   ctx.set('Access-Control-Allow-Origin', '*');
-  return next();
+  await next();
 });
 
 // ✅ Ruta para verificar la conexión con Elasticsearch
@@ -56,7 +56,7 @@ router.get('/load-data', async (ctx) => {
 });
 
 /**
- * ✅ GET /search - Búsqueda en la librería
+ * ✅ GET /search - Búsqueda en Elasticsearch
  */
 router.get('/search',
   validate({
@@ -66,8 +66,17 @@ router.get('/search',
     }
   }),
   async (ctx) => {
-    const { term, offset } = ctx.request.query;
-    ctx.body = await search.queryTerm(term, offset);
+    try {
+      const { term, offset } = ctx.request.query;
+      console.log(`🔎 Búsqueda recibida: term="${term}", offset=${offset}`);
+
+      const response = await search.queryTerm(term, offset);
+      ctx.body = response;
+    } catch (error) {
+      console.error('❌ Error en la búsqueda:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, error: 'Error interno en la búsqueda.' };
+    }
   }
 );
 
@@ -83,8 +92,17 @@ router.get('/paragraphs',
     }
   }),
   async (ctx) => {
-    const { bookTitle, start, end } = ctx.request.query;
-    ctx.body = await search.getParagraphs(bookTitle, start, end);
+    try {
+      const { bookTitle, start, end } = ctx.request.query;
+      console.log(`📖 Obteniendo párrafos de "${bookTitle}" de ${start} a ${end}`);
+
+      const response = await search.getParagraphs(bookTitle, start, end);
+      ctx.body = response;
+    } catch (error) {
+      console.error('❌ Error al obtener párrafos:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, error: 'Error al obtener párrafos.' };
+    }
   }
 );
 
@@ -98,7 +116,7 @@ const port = process.env.PORT || 3000;
 app.use(router.routes()).use(router.allowedMethods());
 
 app.listen(port, () => {
-  console.log(`Servidor ejecutándose en http://localhost:${port}`);
+  console.log(`🚀 Servidor ejecutándose en http://localhost:${port}`);
 });
 
 module.exports = app;
