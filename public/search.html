@@ -7,6 +7,38 @@
     <link rel="stylesheet" href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
+    <style>
+        /* 📌 Estilo para la cuadrícula de resultados */
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+        .result-card {
+            flex: 1 1 calc(33.333% - 16px); /* 3 columnas en pantallas grandes */
+            max-width: 320px;
+            min-width: 280px;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            transition: transform 0.2s;
+        }
+        .result-card:hover {
+            transform: scale(1.05);
+        }
+        @media (max-width: 768px) {
+            .result-card {
+                flex: 1 1 calc(50% - 16px); /* 2 columnas en pantallas medianas */
+            }
+        }
+        @media (max-width: 480px) {
+            .result-card {
+                flex: 1 1 100%; /* 1 columna en pantallas pequeñas */
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="app" class="mui-container">
@@ -23,17 +55,17 @@
             <p>⏳ Buscando resultados...</p>
         </div>
 
-        <div v-if="results.length > 0" class="mui-panel">
+        <div v-if="results.length > 0">
             <h3>Resultados ({{ totalResults }})</h3>
-            <ul class="mui-list">
-                <li v-for="hit in results" class="mui-panel">
+            <div class="results-container">
+                <div v-for="hit in results" class="result-card">
                     <strong>{{ hit._source.title }}</strong> - {{ hit._source.author }} <br>
                     📌 <span v-html="hit.highlight.text[0]"></span><br>
                     🎥 <a :href="getYouTubeTimestampedURL(hit._source.url_youtube, hit._source.text)" target="_blank">
                         Ver en YouTube ⏳ ({{ extractTimestamp(hit._source.text) }})
                     </a>
-                </li>
-            </ul>
+                </div>
+            </div>
         </div>
 
         <!-- 🔄 Botones de paginación -->
@@ -56,7 +88,7 @@
                 totalResults: 0,
                 loading: false,
                 offset: 0, // 📌 Control de paginación
-                resultsPerPage: 10 // 📌 Número de resultados por página
+                resultsPerPage: 9 // 📌 Ahora muestra 9 resultados por página
             },
             methods: {
                 search(offset = 0) {
