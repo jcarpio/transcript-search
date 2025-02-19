@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Búsqueda de Libros</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <h1>Buscador de Libros</h1>
+  <input type="text" id="searchInput" placeholder="Ingrese un término de búsqueda">
+  <button onclick="searchBooks()">Buscar</button>
+  <div id="results"></div>
+
+  <script>
+    function searchBooks() {
+      const term = document.getElementById("searchInput").value;
+      if (!term.trim()) {
+        alert("Por favor, ingrese un término de búsqueda.");
+        return;
+      }
+
+      fetch(`/search?term=${encodeURIComponent(term)}&offset=0`)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data);
+          const resultsDiv = document.getElementById("results");
+          resultsDiv.innerHTML = "";
+
+          if (data.hits && data.hits.hits.length > 0) {
+            data.hits.hits.forEach(hit => {
+              const div = document.createElement("div");
+              div.innerHTML = `<h3>${hit._source.title} - ${hit._source.author}</h3>
+                               <p>${hit._source.text}</p>
+                               <hr>`;
+              resultsDiv.appendChild(div);
+            });
+          } else {
+            resultsDiv.innerHTML = "<p>No se encontraron resultados.</p>";
+          }
+        })
+        .catch(error => {
+          console.error("❌ Error en la búsqueda:", error);
+        });
+    }
+  </script>
+</body>
+</html>
