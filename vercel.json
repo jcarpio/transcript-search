@@ -27,5 +27,6 @@
       "src": "/(.*)",
       "dest": "server/app.js"
     }
-  ]
+  ],
+  "includeFiles": ["books/**/*.txt"]
 }
