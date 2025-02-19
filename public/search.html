@@ -3,139 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscar en la Biblioteca</title>
-    <link href="https://cdn.muicss.com/mui-0.9.28/css/mui.min.css" rel="stylesheet">
-    <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <title>Buscador</title>
+    <link href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css" rel="stylesheet">
     <style>
-        .results-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-        }
-        .result-card {
-            flex: 1 1 calc(33.333% - 16px);
-            max-width: 300px;
-            min-width: 250px;
-            padding: 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            transition: transform 0.2s;
-        }
-        .result-card:hover {
-            transform: scale(1.05);
-        }
-        .result-card.empty {
-            visibility: hidden;
-        }
-        @media (max-width: 1024px) {
-            .result-card {
-                flex: 1 1 calc(50% - 16px);
-            }
-        }
-        @media (max-width: 768px) {
-            .result-card {
-                flex: 1 1 100%;
-            }
-        }
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .search-container { margin-bottom: 20px; }
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .result-card { padding: 15px; border-radius: 8px; background: #f9f9f9; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1); }
+        .bold { font-weight: bold; }
+        .pagination { display: flex; justify-content: space-between; margin-top: 20px; }
+        @media (max-width: 768px) { .grid-container { grid-template-columns: repeat(1, 1fr); } }
     </style>
 </head>
 <body>
-    <div id="app" class="mui-container">
-        <h2>Buscar en la Biblioteca</h2>
-        <div class="mui-textfield">
-            <input v-model="searchTerm" type="text" placeholder="Escribe un término...">
-            <button class="mui-btn mui-btn--primary" v-on:click="search(0)">Buscar</button>
-        </div>
-        <div v-if="loading">🔍 Buscando...</div>
-        <div v-else>
-            <h3 v-if="totalResults > 0">Resultados ({{ totalResults }})</h3>
-            <div class="results-container">
-                <div v-for="result in results" :key="result._id" class="result-card" :class="{ empty: result.empty }">
-                    <strong>{{ result._source.title }} - {{ result._source.author }}</strong>
-                    <br>
-                    📌 {{ extractTimestamp(result._source.text) }} {{ highlightText(result.highlight.text[0] || result._source.text) }}
-                    <br>
-                    🎥 <a :href="generateYouTubeLink(result._source.url_youtube, result._source.text)" target="_blank">Ver en YouTube ⏳ ({{ extractTimestamp(result._source.text) }})</a>
-                </div>
-            </div>
-            <div class="mui-panel pagination-panel">
-                <button class="mui-btn mui-btn--flat" v-on:click="prevPage" :disabled="offset === 0">⬅ ANTERIOR</button>
-                <button class="mui-btn mui-btn--flat" v-on:click="nextPage" :disabled="offset + resultsPerPage >= totalResults">SIGUIENTE ➡</button>
-            </div>
-        </div>
+
+    <div class="search-container">
+        <input type="text" id="searchTerm" placeholder="Escribe aquí..." class="mui-textfield">
+        <button onclick="search()" class="mui-btn mui-btn--primary">BUSCAR</button>
+    </div>
+
+    <h3 id="resultCount">Resultados (0)</h3>
+    <div class="grid-container" id="results"></div>
+
+    <div class="pagination">
+        <button onclick="prevPage()" class="mui-btn mui-btn--raised" id="prevBtn" disabled>⬅ ANTERIOR</button>
+        <button onclick="nextPage()" class="mui-btn mui-btn--raised" id="nextBtn" disabled>SIGUIENTE ➡</button>
     </div>
 
     <script>
-        new Vue({
-            el: "#app",
-            data: {
-                searchTerm: "",
-                results: [],
-                totalResults: 0,
-                loading: false,
-                offset: 0, 
-                resultsPerPage: 9 
-            },
-            methods: {
-                search(offset = 0) {
-                    if (!this.searchTerm.trim()) {
-                        alert("Por favor ingresa un término de búsqueda.");
-                        return;
-                    }
-                    this.loading = true;
-                    this.results = [];
-                    this.offset = offset;
-                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
-                        .then(response => {
-                            this.totalResults = response.data.total.value;
-                            this.results = response.data.hits;
-                            while (this.results.length < this.resultsPerPage) {
-                                this.results.push({ empty: true });
-                            }
-                        })
-                        .catch(error => {
-                            console.error("❌ Error en la búsqueda:", error);
-                            alert("Ocurrió un error al buscar. Intenta nuevamente.");
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
-                },
-                prevPage() {
-                    if (this.offset > 0) {
-                        this.search(this.offset - this.resultsPerPage);
-                    }
-                },
-                nextPage() {
-                    if (this.offset + this.resultsPerPage < this.totalResults) {
-                        this.search(this.offset + this.resultsPerPage);
-                    }
-                },
-                extractTimestamp(text) {
-                    const match = text.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
-                    return match ? match[1] : "00:00";
-                },
-                generateYouTubeLink(url, text) {
-                    const timestamp = this.extractTimestamp(text);
-                    const seconds = this.convertTimestampToSeconds(timestamp);
-                    return `${url}&t=${seconds}s`;
-                },
-                convertTimestampToSeconds(timestamp) {
-                    const parts = timestamp.split(":").reverse();
-                    let seconds = parseInt(parts[0]) || 0;
-                    let minutes = parseInt(parts[1]) || 0;
-                    let hours = parseInt(parts[2]) || 0;
-                    return hours * 3600 + minutes * 60 + seconds;
-                },
-                highlightText(text) {
-                    return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>');
-                }
+        let searchTerm = "";
+        let offset = 0;
+        const resultsPerPage = 9;
+
+        async function search() {
+            searchTerm = document.getElementById("searchTerm").value.trim();
+            if (!searchTerm) return alert("Introduce un término de búsqueda");
+
+            offset = 0;
+            fetchResults();
+        }
+
+        async function fetchResults() {
+            const response = await fetch(`/search?term=${encodeURIComponent(searchTerm)}&offset=${offset}`);
+            const data = await response.json();
+
+            document.getElementById("resultCount").innerText = `Resultados (${data.total.value})`;
+
+            const resultsContainer = document.getElementById("results");
+            resultsContainer.innerHTML = "";
+
+            data.hits.slice(0, resultsPerPage).forEach(hit => {
+                const { title, author, url_youtube, location, text } = hit._source;
+                const highlightedText = hit.highlight?.text[0] || text;
+
+                // Extraer el timestamp en formato 00:00
+                const timeMatch = text.match(/^(\d{1,2}:\d{2})/);
+                const timestamp = timeMatch ? timeMatch[1] : "0:00";
+                const youtubeLink = `${url_youtube}&t=${timestamp.replace(":", "m")}s`;
+
+                // Reemplazar la palabra buscada con <strong>
+                const highlightedHTML = highlightedText.replace(new RegExp(searchTerm, "gi"), match => `<strong>${match}</strong>`);
+
+                resultsContainer.innerHTML += `
+                    <div class="result-card">
+                        <strong>${title}</strong> - ${author} <br>
+                        📌 ${timestamp} ${highlightedHTML} <br>
+                        🎥 <a href="${youtubeLink}" target="_blank">Ver en YouTube ⏳ (${timestamp})</a>
+                    </div>
+                `;
+            });
+
+            // Control de botones de paginación
+            document.getElementById("prevBtn").disabled = offset === 0;
+            document.getElementById("nextBtn").disabled = offset + resultsPerPage >= data.total.value;
+        }
+
+        function prevPage() {
+            if (offset > 0) {
+                offset -= resultsPerPage;
+                fetchResults();
             }
-        });
+        }
+
+        function nextPage() {
+            offset += resultsPerPage;
+            fetchResults();
+        }
     </script>
+
 </body>
 </html>
