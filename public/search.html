@@ -1,63 +1,78 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resultados de Búsqueda</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
-  <style>
-    body { padding: 20px; }
-    .highlight { background-color: yellow; font-weight: bold; }
-    .search-box { margin-bottom: 20px; }
-    .result-item { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
-    .score { font-size: 12px; color: #777; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Transcripciones</title>
+    <link rel="stylesheet" href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
 </head>
 <body>
+    <div id="app" class="mui-container">
+        <h2>🔎 Buscador de Transcripciones</h2>
 
-  <div id="app">
-    <h2>🔍 Buscador de Contenidos</h2>
+        <div class="mui-panel">
+            <div class="mui-textfield">
+                <input v-model="searchTerm" type="text" placeholder="Escribe un término de búsqueda...">
+            </div>
+            <button class="mui-btn mui-btn--raised mui-btn--primary" v-on:click="search">Buscar</button>
+        </div>
 
-    <!-- Barra de búsqueda -->
-    <div class="search-box">
-      <input type="text" v-model="searchTerm" placeholder="Ingrese término de búsqueda" @keyup.enter="performSearch">
-      <button @click="performSearch">Buscar</button>
+        <div v-if="loading" class="mui-panel">
+            <p>⏳ Buscando resultados...</p>
+        </div>
+
+        <div v-if="results.length > 0" class="mui-panel">
+            <h3>Resultados ({{ totalResults }})</h3>
+            <ul class="mui-list">
+                <li v-for="hit in results" class="mui-panel">
+                    <strong>{{ hit._source.title }}</strong> - {{ hit._source.author }} <br>
+                    📌 <span v-html="hit.highlight.text[0]"></span><br>
+                    🎥 <a :href="hit._source.url_youtube" target="_blank">Ver en YouTube</a>
+                </li>
+            </ul>
+        </div>
+
+        <div v-if="results.length === 0 && !loading" class="mui-panel">
+            <p>⚠️ No se encontraron resultados.</p>
+        </div>
     </div>
 
-    <!-- Resultados -->
-    <div v-if="results.length">
-      <h4>📌 {{ results.length }} Resultados encontrados</h4>
-      <div v-for="result in results" :key="result._id" class="result-item">
-        <h3>{{ result._source.title }}</h3>
-        <p><strong>Autor:</strong> {{ result._source.author }}</p>
-        <p class="score">🔹 Score: {{ result._score }}</p>
-        <p v-html="result.highlight.text[0] || result._source.text"></p>
-        <p><a :href="result._source.url_youtube" target="_blank">🎥 Ver en YouTube</a></p>
-        <p><a :href="result._source.url_original" target="_blank">📄 Ver Original</a></p>
-      </div>
-    </div>
+    <script>
+        new Vue({
+            el: "#app",
+            data: {
+                searchTerm: "",
+                results: [],
+                totalResults: 0,
+                loading: false
+            },
+            methods: {
+                search() {
+                    if (!this.searchTerm.trim()) {
+                        alert("Por favor ingresa un término de búsqueda.");
+                        return;
+                    }
 
-    <p v-else>⌛ Escriba un término y presione "Enter" para buscar.</p>
-  </div>
+                    this.loading = true;
+                    this.results = [];
 
-  <script>
-    new Vue({
-      el: "#app",
-      data: {
-        searchTerm: "",
-        results: []
-      },
-      methods: {
-        async performSearch() {
-          if (!this.searchTerm) return;
-          const response = await axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`);
-          this.results = response.data.hits.hits;
-        }
-      }
-    });
-  </script>
-
+                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`)
+                        .then(response => {
+                            this.totalResults = response.data.total.value;
+                            this.results = response.data.hits;
+                        })
+                        .catch(error => {
+                            console.error("❌ Error en la búsqueda:", error);
+                            alert("Ocurrió un error al buscar. Intenta nuevamente.");
+                        })
+                        .finally(() => {
+                            this.loading = false;
+                        });
+                }
+            }
+        });
+    </script>
 </body>
 </html>
