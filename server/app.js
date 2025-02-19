@@ -1,6 +1,7 @@
 const Koa = require('koa');
 const Router = require('koa-router');
 const serve = require('koa-static');
+const fs = require('fs');
 const path = require('path');
 const joi = require('joi');
 const validate = require('koa-joi-validate');
@@ -106,10 +107,26 @@ router.get('/paragraphs',
   }
 );
 
-// ✅ Ruta catch-all para servir `index.html` en rutas desconocidas
+/**
+ * ✅ Servir archivos estáticos específicos dentro de "public/"
+ */
+router.get('/public/(.*)', async (ctx) => {
+  const requestedFile = path.join(__dirname, '../public', ctx.params[0]);
+  if (fs.existsSync(requestedFile)) {
+    ctx.type = path.extname(requestedFile);
+    ctx.body = fs.createReadStream(requestedFile);
+  } else {
+    ctx.status = 404;
+    ctx.body = 'Archivo no encontrado';
+  }
+});
+
+/**
+ * ✅ Ruta catch-all para servir `index.html` en rutas desconocidas
+ */
 router.get('(.*)', async (ctx) => {
   ctx.type = 'html';
-  ctx.body = require('fs').createReadStream(path.join(__dirname, '../public/index.html'));
+  ctx.body = fs.createReadStream(path.join(__dirname, '../public/index.html'));
 });
 
 const port = process.env.PORT || 3000;
