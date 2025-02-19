@@ -32,7 +32,7 @@
     }
     .result-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr); /* Máximo 3 columnas */
+      grid-template-columns: repeat(3, 1fr);
       gap: 15px;
     }
     .pagination {
@@ -59,9 +59,12 @@
       <div v-for="result in results" :key="result._id" class="result-card">
         <strong>{{ result._source.title }}</strong> - {{ result._source.author }}  
         <p>
-          📌 {{ formatTime(result._source.location) }} <span v-html="highlightText(result.highlight.text[0] || result._source.text)"></span>
+          📌 {{ formatTime(extractTime(result._source.text)) }} 
+          <span v-html="highlightText(result.highlight.text[0] || result._source.text)"></span>
           <br>
-          🎥 <a :href="generateYouTubeLink(result._source.url_youtube, result._source.location)" target="_blank">Ver en YouTube ⏳ ({{ formatTime(result._source.location) }})</a>
+          🎥 <a :href="generateYouTubeLink(result._source.url_youtube, extractTime(result._source.text))" target="_blank">
+            Ver en YouTube ⏳ ({{ formatTime(extractTime(result._source.text)) }})
+          </a>
         </p>
       </div>
     </div>
@@ -80,7 +83,7 @@
         results: [],
         totalResults: 0,
         startIndex: 0,
-        resultsPerPage: 8,  // Exactamente 9 resultados por página
+        resultsPerPage: 9,
       },
       methods: {
         async search() {
@@ -107,6 +110,16 @@
             this.search();
           }
         },
+        extractTime(text) {
+          const timeMatch = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+          if (timeMatch) {
+            let hours = timeMatch[3] ? parseInt(timeMatch[1], 10) : 0;
+            let minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10);
+            let seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10);
+            return hours * 3600 + minutes * 60 + seconds;
+          }
+          return 0;
+        },
         formatTime(seconds) {
           let h = Math.floor(seconds / 3600);
           let m = Math.floor((seconds % 3600) / 60);
@@ -119,7 +132,7 @@
           return `${url}&t=${seconds}s`;
         },
         highlightText(text) {
-          return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>'); // Cambia <em> a <strong>
+          return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>'); 
         }
       }
     });
