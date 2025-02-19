@@ -4,99 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscar en transcripciones</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/muicss/0.9.41/css/mui.min.css">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+    <link href="https://cdn.muicss.com/mui-0.9.41/css/mui.min.css" rel="stylesheet" type="text/css" />
     <style>
-        body { font-family: 'Open Sans', sans-serif; padding: 20px; }
-        .search-container { max-width: 600px; margin: 0 auto; text-align: center; }
-        .mui-btn { width: 100%; }
-        .results-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
-        .result-card { width: 30%; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); }
-        .pagination { text-align: center; margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            text-align: center;
+        }
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            justify-content: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .result-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
-
-<div id="app">
+    <h1>Buscar en transcripciones</h1>
     <div class="search-container">
-        <h1>Buscar en transcripciones</h1>
-        <div class="mui-textfield">
-            <input v-model="searchTerm" type="text" placeholder="Escribe un término para buscar">
-        </div>
-        <button class="mui-btn mui-btn--raised mui-btn--primary" v-on:click="performSearch">BUSCAR</button>
+        <input id="searchTerm" type="text" placeholder="Escribe un término para buscar" class="mui-textfield" style="width: 100%; padding: 10px; font-size: 16px;">
+        <button onclick="search()" class="mui-btn mui-btn--primary" style="width: 100%; margin-top: 10px;">BUSCAR</button>
+    </div>
+    
+    <h2>Resultados (<span id="totalResults">0</span>)</h2>
+    <p>Mostrando <span id="startResult">0</span> - <span id="endResult">0</span> de <span id="totalResults">0</span></p>
+    
+    <div class="results-container" id="results"></div>
+    
+    <div class="pagination">
+        <button onclick="prevPage()" class="mui-btn mui-btn--flat">⬅ ANTERIOR</button>
+        <button onclick="nextPage()" class="mui-btn mui-btn--flat">SIGUIENTE ➡</button>
     </div>
 
-    <div v-if="totalResults > 0">
-        <h2>Resultados ({{ totalResults }})</h2>
-        <p>Mostrando {{ startResult }} - {{ endResult }} de {{ totalResults }}</p>
-        <div class="results-container">
-            <div class="result-card" v-for="hit in searchResults" :key="hit._id">
-                <strong>{{ hit._source.title }} - {{ hit._source.author }}</strong>
-                <p>📌 {{ formatTime(hit.timestamp) }} <span v-html="highlightText(hit.highlight.text[0])"></span></p>
-                <p>🎥 <a :href="generateYouTubeLink(hit._source.url_youtube, hit.timestamp)" target="_blank">Ver en YouTube ⏳ ({{ formatTime(hit.timestamp) }})</a></p>
-            </div>
-        </div>
+    <script>
+        let currentPage = 0;
+        const resultsPerPage = 9;
+        let totalResults = 0;
 
-        <div class="pagination">
-            <button v-if="searchOffset > 0" class="mui-btn mui-btn--raised" v-on:click="prevPage">⬅ ANTERIOR</button>
-            <button v-if="searchOffset + 9 < totalResults" class="mui-btn mui-btn--raised" v-on:click="nextPage">SIGUIENTE ➡</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-    new Vue({
-        el: '#app',
-        data: {
-            searchTerm: '',
-            searchResults: [],
-            totalResults: 0,
-            searchOffset: 0
-        },
-        computed: {
-            startResult() { return this.searchOffset + 1; },
-            endResult() { return Math.min(this.searchOffset + 9, this.totalResults); }
-        },
-        methods: {
-            async performSearch() {
-                if (!this.searchTerm.trim()) return;
-                try {
-                    const response = await axios.get(`/search`, { params: { term: this.searchTerm, offset: this.searchOffset } });
-                    this.searchResults = response.data.hits;
-                    this.totalResults = response.data.total.value;
-                } catch (error) {
-                    console.error("Error en la búsqueda:", error);
-                }
-            },
-            prevPage() { this.searchOffset -= 9; this.performSearch(); },
-            nextPage() { this.searchOffset += 9; this.performSearch(); },
-            extractTime(text) {
-                const timeMatch = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-                if (timeMatch) {
-                    let hours = timeMatch[3] ? parseInt(timeMatch[1], 10) : 0;
-                    let minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10);
-                    let seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10);
-                    return hours * 3600 + minutes * 60 + seconds;
-                }
-                return 0;
-            },
-            formatTime(seconds) {
-                let h = Math.floor(seconds / 3600);
-                let m = Math.floor((seconds % 3600) / 60);
-                let s = seconds % 60;
-                return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
-            },
-            generateYouTubeLink(url, seconds) {
-                return `${url}&t=${seconds}s`;
-            },
-            highlightText(text) {
-                return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>');
+        function search() {
+            const term = document.getElementById('searchTerm').value;
+            if (!term) return;
+            
+            fetch(`/search?term=${encodeURIComponent(term)}&offset=${currentPage * resultsPerPage}`)
+                .then(res => res.json())
+                .then(data => {
+                    totalResults = data.total.value;
+                    document.getElementById('totalResults').innerText = totalResults;
+                    document.getElementById('startResult').innerText = currentPage * resultsPerPage + 1;
+                    document.getElementById('endResult').innerText = Math.min((currentPage + 1) * resultsPerPage, totalResults);
+                    
+                    const resultsContainer = document.getElementById('results');
+                    resultsContainer.innerHTML = '';
+                    
+                    data.hits.forEach(hit => {
+                        const timestamp = extractTimestamp(hit._source.text);
+                        const formattedTime = formatTime(timestamp);
+                        
+                        const highlight = hit.highlight.text[0].replace(/<em>/g, '<strong>').replace(/<\/em>/g, '</strong>');
+                        
+                        const resultHTML = `
+                            <div class="result-card">
+                                <strong>${hit._source.title} - ${hit._source.author}</strong>
+                                <p>📌 ${formattedTime} ${highlight}</p>
+                                <p>🎥 <a href="${hit._source.url_youtube}&t=${timestamp}s" target="_blank">Ver en YouTube ⏳ (${formattedTime})</a></p>
+                            </div>
+                        `;
+                        resultsContainer.innerHTML += resultHTML;
+                    });
+                });
+        }
+        
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                search();
             }
         }
-    });
-</script>
+        
+        function nextPage() {
+            if ((currentPage + 1) * resultsPerPage < totalResults) {
+                currentPage++;
+                search();
+            }
+        }
 
+        function extractTimestamp(text) {
+            const match = text.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if (!match) return 0;
+            
+            const hours = match[3] ? parseInt(match[1]) : 0;
+            const minutes = match[3] ? parseInt(match[2]) : parseInt(match[1]);
+            const seconds = match[3] ? parseInt(match[2]) : parseInt(match[2]);
+            
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            
+            if (h > 0) {
+                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            } else {
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            }
+        }
+    </script>
 </body>
 </html>
+
