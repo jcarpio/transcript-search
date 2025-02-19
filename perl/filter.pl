@@ -6,7 +6,7 @@ while (<>) {
    chop;
    print "$_ ";
  } else {
-   print;
+   print "$_\n \n";
  }
 }
 
