@@ -1,60 +1,82 @@
 const { Client } = require('@elastic/elasticsearch');
 
-// Core ES variables for this project
-const index = 'library';
-const type = 'book';
+// Verificar que las variables de entorno necesarias estén configuradas
+if (!process.env.CLOUD_ID || !process.env.ELASTIC_USERNAME || !process.env.ELASTIC_PASSWORD) {
+  console.error("❌ ERROR: Faltan variables de entorno de Elasticsearch.");
+  process.exit(1); // Detiene la ejecución si faltan credenciales
+}
 
 // Configuración del cliente de Elasticsearch en Elastic Cloud
 const client = new Client({
   cloud: {
-    id: process.env.CLOUD_ID, // Cloud ID de Elastic Cloud
+    id: process.env.CLOUD_ID
   },
   auth: {
-    username: process.env.ELASTIC_USERNAME, // Usuario de Elastic Cloud
-    password: process.env.ELASTIC_PASSWORD, // Contraseña de Elastic Cloud
-  },
+    username: process.env.ELASTIC_USERNAME,
+    password: process.env.ELASTIC_PASSWORD
+  }
 });
 
-/** Check the ES connection status */
+// Nombre del índice y tipo de documento
+const index = 'library';
+const type = '_doc';
+
+/** Verifica el estado de la conexión con Elasticsearch */
 async function checkConnection() {
-  let isConnected = false;
-  while (!isConnected) {
-    console.log('Connecting to ES');
-    try {
-      const health = await client.cluster.health({});
-      console.log(health);
-      isConnected = true;
-    } catch (err) {
-      console.log('Connection Failed, Retrying...', err);
-    }
+  try {
+    console.log("🔍 Verificando conexión con Elasticsearch...");
+    const health = await client.cluster.health({});
+    console.log("✅ Elasticsearch Health:", health);
+    return true;
+  } catch (err) {
+    console.error("❌ Error de conexión con Elasticsearch:", err);
+    throw err; // Lanza el error para que sea registrado en logs
   }
 }
 
-/** Clear the index, recreate it, and add mappings */
+/** Reinicia el índice en Elasticsearch */
 async function resetIndex() {
-  if (await client.indices.exists({ index })) {
-    await client.indices.delete({ index });
-  }
+  try {
+    console.log("🔄 Reiniciando índice...");
+    const exists = await client.indices.exists({ index });
+    if (exists) {
+      await client.indices.delete({ index });
+      console.log(`🗑️ Índice '${index}' eliminado.`);
+    }
 
-  await client.indices.create({ index });
-  await putBookMapping();
+    await client.indices.create({ index });
+    console.log(`✅ Índice '${index}' creado.`);
+    await putBookMapping();
+  } catch (err) {
+    console.error("❌ Error al reiniciar el índice:", err);
+    throw err;
+  }
 }
 
-/** Add book section schema mapping to ES */
+/** Agrega el mapeo de los documentos en Elasticsearch */
 async function putBookMapping() {
-  const schema = {
-    title: { type: 'keyword' },
-    author: { type: 'keyword' },
-    url_original: { type: 'keyword' },
-    url_youtube: { type: 'keyword' },
-    url_ivoox: { type: 'keyword' },
-    location: { type: 'integer' },
-    text: { type: 'text' },
-  };
+  try {
+    console.log("📌 Configurando mapeo de documentos...");
+    const schema = {
+      properties: {
+        title: { type: 'keyword' },
+        author: { type: 'keyword' },
+        url_original: { type: 'keyword' },
+        url_youtube: { type: 'keyword' },
+        url_ivoox: { type: 'keyword' },
+        location: { type: 'integer' },
+        text: { type: 'text' }
+      }
+    };
 
-  return client.indices.putMapping({ index, type, body: { properties: schema } });
+    await client.indices.putMapping({ index, body: schema });
+    console.log("✅ Mapeo de documentos configurado.");
+  } catch (err) {
+    console.error("❌ Error al configurar el mapeo:", err);
+    throw err;
+  }
 }
 
 module.exports = {
-  client, index, type, checkConnection, resetIndex,
+  client, index, type, checkConnection, resetIndex
 };
