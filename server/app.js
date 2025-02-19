@@ -1,5 +1,7 @@
 const Koa = require('koa');
 const Router = require('koa-router');
+const serve = require('koa-static');
+const path = require('path');
 const joi = require('joi');
 const validate = require('koa-joi-validate');
 const search = require('./search');
@@ -8,6 +10,9 @@ const loadData = require('./load_data');
 
 const app = new Koa();
 const router = new Router();
+
+// 📌 Servir archivos estáticos desde la carpeta 'public'
+app.use(serve(path.join(__dirname, '../public')));
 
 // Log each request to the console
 app.use(async (ctx, next) => {
@@ -28,7 +33,7 @@ app.use(async (ctx, next) => {
   return next();
 });
 
-// Ruta para verificar la conexión con Elasticsearch
+// ✅ Ruta para verificar la conexión con Elasticsearch
 router.get('/health', async (ctx) => {
   try {
     await checkConnection();
@@ -39,7 +44,7 @@ router.get('/health', async (ctx) => {
   }
 });
 
-// Ruta para ejecutar `load_data.js` manualmente desde el navegador o API
+// ✅ Ruta para ejecutar `load_data.js` manualmente
 router.get('/load-data', async (ctx) => {
   try {
     await loadData();
@@ -51,11 +56,7 @@ router.get('/load-data', async (ctx) => {
 });
 
 /**
- * GET /search
- * Search for a term in the library
- * Query Params -
- * term: string under 60 characters
- * offset: positive integer
+ * ✅ GET /search - Búsqueda en la librería
  */
 router.get('/search',
   validate({
@@ -71,12 +72,7 @@ router.get('/search',
 );
 
 /**
- * GET /paragraphs
- * Get a range of paragraphs from the specified book
- * Query Params -
- * bookTitle: string under 256 characters
- * start: positive integer
- * end: positive integer greater than start
+ * ✅ GET /paragraphs - Obtener párrafos de un libro
  */
 router.get('/paragraphs',
   validate({
@@ -92,11 +88,14 @@ router.get('/paragraphs',
   }
 );
 
-const port = process.env.PORT || 3000;
+// ✅ Ruta catch-all para servir `index.html` en rutas desconocidas
+router.get('(.*)', async (ctx) => {
+  ctx.type = 'html';
+  ctx.body = require('fs').createReadStream(path.join(__dirname, '../public/index.html'));
+});
 
-app
-  .use(router.routes())
-  .use(router.allowedMethods());
+const port = process.env.PORT || 3000;
+app.use(router.routes()).use(router.allowedMethods());
 
 app.listen(port, () => {
   console.log(`Servidor ejecutándose en http://localhost:${port}`);
