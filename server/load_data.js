@@ -43,13 +43,23 @@ function parseBookFile(filePath) {
   return { title, author, url_original, url_youtube, url_ivoox, paragraphs };
 }
 
-/** Insertar los libros en Elasticsearch */
+/** Insertar los libros en Elasticsearch sin `_type` (compatible con Elasticsearch 7+) */
 async function insertBookData(title, author, url_original, url_youtube, url_ivoox, paragraphs) {
   let bulkOps = [];
 
   for (let i = 0; i < paragraphs.length; i++) {
-    bulkOps.push({ index: { _index: esConnection.index, _type: esConnection.type } });
-    bulkOps.push({ author, title, url_original, url_youtube, url_ivoox, location: i, text: paragraphs[i] });
+    // 📌 Eliminamos `_type` (que generaba el error)
+    bulkOps.push({ index: { _index: esConnection.index } });
+
+    bulkOps.push({
+      author,
+      title,
+      url_original,
+      url_youtube,
+      url_ivoox,
+      location: i,
+      text: paragraphs[i]
+    });
 
     if (i > 0 && i % 500 === 0) {
       console.log(`📤 Insertando párrafos ${i - 499} - ${i} en Elasticsearch...`);
