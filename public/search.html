@@ -16,7 +16,7 @@
             <div class="mui-textfield">
                 <input v-model="searchTerm" type="text" placeholder="Escribe un término de búsqueda...">
             </div>
-            <button class="mui-btn mui-btn--raised mui-btn--primary" v-on:click="search">Buscar</button>
+            <button class="mui-btn mui-btn--raised mui-btn--primary" v-on:click="search(0)">Buscar</button>
         </div>
 
         <div v-if="loading" class="mui-panel">
@@ -36,6 +36,12 @@
             </ul>
         </div>
 
+        <!-- 🔄 Botones de paginación -->
+        <div v-if="totalResults > resultsPerPage" class="mui-panel">
+            <button class="mui-btn" v-on:click="prevPage" :disabled="offset === 0">⬅ Anterior</button>
+            <button class="mui-btn" v-on:click="nextPage" :disabled="offset + resultsPerPage >= totalResults">Siguiente ➡</button>
+        </div>
+
         <div v-if="results.length === 0 && !loading" class="mui-panel">
             <p>⚠️ No se encontraron resultados.</p>
         </div>
@@ -48,10 +54,12 @@
                 searchTerm: "",
                 results: [],
                 totalResults: 0,
-                loading: false
+                loading: false,
+                offset: 0, // 📌 Control de paginación
+                resultsPerPage: 10 // 📌 Número de resultados por página
             },
             methods: {
-                search() {
+                search(offset = 0) {
                     if (!this.searchTerm.trim()) {
                         alert("Por favor ingresa un término de búsqueda.");
                         return;
@@ -59,8 +67,9 @@
 
                     this.loading = true;
                     this.results = [];
+                    this.offset = offset; // 📌 Actualizar la paginación
 
-                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`)
+                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
                         .then(response => {
                             this.totalResults = response.data.total.value;
                             this.results = response.data.hits;
@@ -72,6 +81,20 @@
                         .finally(() => {
                             this.loading = false;
                         });
+                },
+
+                /** ⏮ Función para retroceder en la paginación */
+                prevPage() {
+                    if (this.offset > 0) {
+                        this.search(this.offset - this.resultsPerPage);
+                    }
+                },
+
+                /** ⏭ Función para avanzar en la paginación */
+                nextPage() {
+                    if (this.offset + this.resultsPerPage < this.totalResults) {
+                        this.search(this.offset + this.resultsPerPage);
+                    }
                 },
 
                 /** Extraer el timestamp (hh:mm:ss) del texto del párrafo */
