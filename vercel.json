@@ -24,8 +24,16 @@
       "dest": "server/app.js"
     },
     {
+      "src": "/public/(.*)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/search.html",
+      "dest": "/public/search.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "server/app.js"
+      "dest": "/public/index.html"
     }
   ]
 }
