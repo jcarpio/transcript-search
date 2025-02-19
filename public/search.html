@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Buscador de Transcripciones</title>
+  <title>Buscar en transcripciones</title>
   <link rel="stylesheet" href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
@@ -28,13 +28,12 @@
       background: #f9f9f9;
       padding: 15px;
       border-radius: 8px;
-      margin-bottom: 10px;
       box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
     }
     .result-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr); /* Máximo 3 columnas */
+      gap: 15px;
     }
     .pagination {
       display: flex;
@@ -49,18 +48,18 @@
 </head>
 <body>
   <div id="app" class="container">
+    <h2>Buscar en transcripciones</h2>
     <input v-model="searchTerm" type="text" class="search-bar" placeholder="Buscar..." @keyup.enter="search">
-
     <button class="mui-btn mui-btn--primary" @click="search">Buscar</button>
 
     <h3 v-if="totalResults > 0">Resultados ({{ totalResults }})</h3>
-    <p v-if="totalResults > 0">Mostrando {{ startIndex + 1 }} - {{ startIndex + results.length }} de {{ totalResults }}</p>
+    <p v-if="totalResults > 0">Mostrando {{ startIndex + 1 }} - {{ Math.min(startIndex + results.length, totalResults) }} de {{ totalResults }}</p>
 
     <div class="result-grid">
       <div v-for="result in results" :key="result._id" class="result-card">
         <strong>{{ result._source.title }}</strong> - {{ result._source.author }}  
         <p>
-          📌 {{ formatTime(result._source.location) }} {{ result.highlight.text[0] || result._source.text }}
+          📌 {{ formatTime(result._source.location) }} <span v-html="highlightText(result.highlight.text[0] || result._source.text)"></span>
           <br>
           🎥 <a :href="generateYouTubeLink(result._source.url_youtube, result._source.location)" target="_blank">Ver en YouTube ⏳ ({{ formatTime(result._source.location) }})</a>
         </p>
@@ -81,7 +80,7 @@
         results: [],
         totalResults: 0,
         startIndex: 0,
-        resultsPerPage: 9,  // Máximo 9 resultados por página
+        resultsPerPage: 9,  // Exactamente 9 resultados por página
       },
       methods: {
         async search() {
@@ -112,10 +111,15 @@
           let h = Math.floor(seconds / 3600);
           let m = Math.floor((seconds % 3600) / 60);
           let s = seconds % 60;
-          return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+          return h > 0 
+            ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` 
+            : `${m}:${s.toString().padStart(2, '0')}`;
         },
         generateYouTubeLink(url, seconds) {
           return `${url}&t=${seconds}s`;
+        },
+        highlightText(text) {
+          return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>'); // Cambia <em> a <strong>
         }
       }
     });
