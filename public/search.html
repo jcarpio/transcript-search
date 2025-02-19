@@ -1,48 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Búsqueda de Libros</title>
-  <link rel="stylesheet" href="/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Párrafos</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+        .result { border-bottom: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+        .loading { font-style: italic; color: gray; }
+    </style>
 </head>
 <body>
-  <h1>Buscador de Libros</h1>
-  <input type="text" id="searchInput" placeholder="Ingrese un término de búsqueda">
-  <button onclick="searchBooks()">Buscar</button>
-  <div id="results"></div>
+    <div id="app">
+        <h1>Buscador de Párrafos en Elasticsearch</h1>
+        <input v-model="searchTerm" type="text" placeholder="Introduce un término de búsqueda">
+        <button @click="search">Buscar</button>
 
-  <script>
-    function searchBooks() {
-      const term = document.getElementById("searchInput").value;
-      if (!term.trim()) {
-        alert("Por favor, ingrese un término de búsqueda.");
-        return;
-      }
+        <p v-if="loading" class="loading">Buscando...</p>
+        <p v-if="error" style="color: red;">{{ error }}</p>
 
-      fetch(`/search?term=${encodeURIComponent(term)}&offset=0`)
-        .then(response => response.json())
-        .then(data => {
-          console.log(data);
-          const resultsDiv = document.getElementById("results");
-          resultsDiv.innerHTML = "";
+        <div v-if="results.length">
+            <h3>Resultados:</h3>
+            <div v-for="hit in results" class="result">
+                <strong>{{ hit._source.title }} - {{ hit._source.author }}</strong>
+                <p>{{ hit._source.text }}</p>
+            </div>
+        </div>
+        <p v-if="!loading && results.length === 0 && searchTerm">No se encontraron resultados.</p>
+    </div>
 
-          if (data.hits && data.hits.hits.length > 0) {
-            data.hits.hits.forEach(hit => {
-              const div = document.createElement("div");
-              div.innerHTML = `<h3>${hit._source.title} - ${hit._source.author}</h3>
-                               <p>${hit._source.text}</p>
-                               <hr>`;
-              resultsDiv.appendChild(div);
-            });
-          } else {
-            resultsDiv.innerHTML = "<p>No se encontraron resultados.</p>";
-          }
-        })
-        .catch(error => {
-          console.error("❌ Error en la búsqueda:", error);
+    <script>
+        new Vue({
+            el: "#app",
+            data: {
+                searchTerm: "",
+                results: [],
+                loading: false,
+                error: null
+            },
+            methods: {
+                search() {
+                    if (!this.searchTerm.trim()) {
+                        this.error = "Por favor, introduce un término de búsqueda.";
+                        return;
+                    }
+                    this.error = null;
+                    this.loading = true;
+
+                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`)
+                        .then(response => {
+                            this.results = response.data.hits.hits;
+                        })
+                        .catch(err => {
+                            this.error = "Error al buscar en Elasticsearch.";
+                            console.error(err);
+                        })
+                        .finally(() => {
+                            this.loading = false;
+                        });
+                }
+            }
         });
-    }
-  </script>
+    </script>
 </body>
 </html>
