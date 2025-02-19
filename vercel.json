@@ -28,5 +28,9 @@
       "dest": "server/app.js"
     }
   ],
-  "includeFiles": ["books/**/*.txt"]
+  "functions": {
+    "server/app.js": {
+      "includeFiles": "books/**/*.txt"
+    }
+  }
 }
