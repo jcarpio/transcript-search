@@ -3,165 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Transcripciones</title>
-    <link rel="stylesheet" href="https://cdn.muicss.com/mui-0.9.20/css/mui.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <title>Buscar en la Biblioteca</title>
+    <link href="https://cdn.muicss.com/mui-0.9.28/css/mui.min.css" rel="stylesheet">
+    <script src="https://cdn.muicss.com/mui-0.9.28/js/mui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <style>
-       .results-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: center;
-}
-.result-card {
-    flex: 1 1 calc(25% - 16px); /* 4 columnas en pantallas grandes */
-    max-width: 280px;
-    min-width: 220px;
-    padding: 16px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    transition: transform 0.2s;
-}
-.result-card:hover {
-    transform: scale(1.05);
-}
-@media (max-width: 1024px) {
-    .result-card {
-        flex: 1 1 calc(33.333% - 16px); /* 3 columnas en pantallas medianas */
-    }
-}
-@media (max-width: 768px) {
-    .result-card {
-        flex: 1 1 calc(50% - 16px); /* 2 columnas en pantallas pequeñas */
-    }
-}
-@media (max-width: 480px) {
-    .result-card {
-        flex: 1 1 100%; /* 1 columna en móviles */
-    }
-}
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+        .result-card {
+            flex: 1 1 calc(33.333% - 16px);
+            max-width: 300px;
+            min-width: 250px;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            transition: transform 0.2s;
+        }
+        .result-card:hover {
+            transform: scale(1.05);
+        }
+        .result-card.empty {
+            visibility: hidden;
+        }
+        @media (max-width: 1024px) {
+            .result-card {
+                flex: 1 1 calc(50% - 16px);
+            }
+        }
+        @media (max-width: 768px) {
+            .result-card {
+                flex: 1 1 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="app" class="mui-container">
-        <h2>🔎 Buscador de Transcripciones</h2>
-
-        <div class="mui-panel">
-            <div class="mui-textfield">
-                <input v-model="searchTerm" type="text" placeholder="Escribe un término de búsqueda...">
-            </div>
-            <button class="mui-btn mui-btn--raised mui-btn--primary" v-on:click="search(0)">Buscar</button>
+        <h2>Buscar en la Biblioteca</h2>
+        <div class="mui-textfield">
+            <input v-model="searchTerm" type="text" placeholder="Escribe un término...">
+            <button class="mui-btn mui-btn--primary" v-on:click="search(0)">Buscar</button>
         </div>
-
-        <div v-if="loading" class="mui-panel">
-            <p>⏳ Buscando resultados...</p>
-        </div>
-
-        <div v-if="results.length > 0">
-            <h3>Resultados ({{ totalResults }})</h3>
+        <div v-if="loading">🔍 Buscando...</div>
+        <div v-else>
+            <h3 v-if="totalResults > 0">Resultados ({{ totalResults }})</h3>
             <div class="results-container">
-                <div v-for="hit in results" class="result-card">
-                    <strong>{{ hit._source.title }}</strong> - {{ hit._source.author }} <br>
-                    📌 <span v-html="hit.highlight.text[0]"></span><br>
-                    🎥 <a :href="getYouTubeTimestampedURL(hit._source.url_youtube, hit._source.text)" target="_blank">
-                        Ver en YouTube ⏳ ({{ extractTimestamp(hit._source.text) }})
-                    </a>
+                <div v-for="result in results" :key="result._id" class="result-card" :class="{ empty: result.empty }">
+                    <strong>{{ result._source.title }} - {{ result._source.author }}</strong>
+                    <br>
+                    📌 {{ extractTimestamp(result._source.text) }} {{ highlightText(result.highlight.text[0] || result._source.text) }}
+                    <br>
+                    🎥 <a :href="generateYouTubeLink(result._source.url_youtube, result._source.text)" target="_blank">Ver en YouTube ⏳ ({{ extractTimestamp(result._source.text) }})</a>
                 </div>
             </div>
-        </div>
-
-        <!-- 🔄 Botones de paginación -->
-        <div v-if="totalResults > resultsPerPage" class="mui-panel">
-            <button class="mui-btn" v-on:click="prevPage" :disabled="offset === 0">⬅ Anterior</button>
-            <button class="mui-btn" v-on:click="nextPage" :disabled="offset + resultsPerPage >= totalResults">Siguiente ➡</button>
-        </div>
-
-        <div v-if="results.length === 0 && !loading" class="mui-panel">
-            <p>⚠️ No se encontraron resultados.</p>
+            <div class="mui-panel pagination-panel">
+                <button class="mui-btn mui-btn--flat" v-on:click="prevPage" :disabled="offset === 0">⬅ ANTERIOR</button>
+                <button class="mui-btn mui-btn--flat" v-on:click="nextPage" :disabled="offset + resultsPerPage >= totalResults">SIGUIENTE ➡</button>
+            </div>
         </div>
     </div>
 
-   <script>
-    new Vue({
-        el: "#app",
-        data: {
-            searchTerm: "",
-            results: [],
-            totalResults: 0,
-            loading: false,
-            offset: 0, // 📌 Control de paginación
-            resultsPerPage: 8 // 📌 Ahora muestra 8 resultados por página
-        },
-        methods: {
-            search(offset = 0) {
-                if (!this.searchTerm.trim()) {
-                    alert("Por favor ingresa un término de búsqueda.");
-                    return;
-                }
-
-                this.loading = true;
-                this.results = [];
-                this.offset = offset; // 📌 Actualizar la paginación
-
-                axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
-                    .then(response => {
-                        this.totalResults = response.data.total.value;
-                        this.results = response.data.hits;
-                    })
-                    .catch(error => {
-                        console.error("❌ Error en la búsqueda:", error);
-                        alert("Ocurrió un error al buscar. Intenta nuevamente.");
-                    })
-                    .finally(() => {
-                        this.loading = false;
-                    });
+    <script>
+        new Vue({
+            el: "#app",
+            data: {
+                searchTerm: "",
+                results: [],
+                totalResults: 0,
+                loading: false,
+                offset: 0, 
+                resultsPerPage: 9 
             },
-
-            /** ⏮ Función para retroceder en la paginación */
-            prevPage() {
-                if (this.offset > 0) {
-                    this.search(this.offset - this.resultsPerPage);
+            methods: {
+                search(offset = 0) {
+                    if (!this.searchTerm.trim()) {
+                        alert("Por favor ingresa un término de búsqueda.");
+                        return;
+                    }
+                    this.loading = true;
+                    this.results = [];
+                    this.offset = offset;
+                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
+                        .then(response => {
+                            this.totalResults = response.data.total.value;
+                            this.results = response.data.hits;
+                            while (this.results.length < this.resultsPerPage) {
+                                this.results.push({ empty: true });
+                            }
+                        })
+                        .catch(error => {
+                            console.error("❌ Error en la búsqueda:", error);
+                            alert("Ocurrió un error al buscar. Intenta nuevamente.");
+                        })
+                        .finally(() => {
+                            this.loading = false;
+                        });
+                },
+                prevPage() {
+                    if (this.offset > 0) {
+                        this.search(this.offset - this.resultsPerPage);
+                    }
+                },
+                nextPage() {
+                    if (this.offset + this.resultsPerPage < this.totalResults) {
+                        this.search(this.offset + this.resultsPerPage);
+                    }
+                },
+                extractTimestamp(text) {
+                    const match = text.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+                    return match ? match[1] : "00:00";
+                },
+                generateYouTubeLink(url, text) {
+                    const timestamp = this.extractTimestamp(text);
+                    const seconds = this.convertTimestampToSeconds(timestamp);
+                    return `${url}&t=${seconds}s`;
+                },
+                convertTimestampToSeconds(timestamp) {
+                    const parts = timestamp.split(":").reverse();
+                    let seconds = parseInt(parts[0]) || 0;
+                    let minutes = parseInt(parts[1]) || 0;
+                    let hours = parseInt(parts[2]) || 0;
+                    return hours * 3600 + minutes * 60 + seconds;
+                },
+                highlightText(text) {
+                    return text.replace(/<em>(.*?)<\/em>/g, '<strong>$1</strong>');
                 }
-            },
-
-            /** ⏭ Función para avanzar en la paginación */
-            nextPage() {
-                if (this.offset + this.resultsPerPage < this.totalResults) {
-                    this.search(this.offset + this.resultsPerPage);
-                }
-            },
-
-            /** Extraer el timestamp (hh:mm:ss) del texto del párrafo */
-            extractTimestamp(text) {
-                const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-                if (match) {
-                    return match[0]; // Devuelve el timestamp en formato hh:mm:ss o mm:ss
-                }
-                return "0:00"; // Si no encuentra nada, devuelve inicio del video
-            },
-
-            /** Convertir hh:mm:ss o mm:ss a segundos */
-            convertToSeconds(timestamp) {
-                const parts = timestamp.split(":").map(Number);
-                if (parts.length === 3) {
-                    return parts[0] * 3600 + parts[1] * 60 + parts[2]; // hh:mm:ss → segundos
-                } else if (parts.length === 2) {
-                    return parts[0] * 60 + parts[1]; // mm:ss → segundos
-                }
-                return 0;
-            },
-
-            /** Generar la URL con el timestamp en YouTube */
-            getYouTubeTimestampedURL(url, text) {
-                if (!url) return "#"; // Evita enlaces rotos
-                const timestamp = this.extractTimestamp(text);
-                const seconds = this.convertToSeconds(timestamp);
-                return `${url.split("&")[0]}&t=${seconds}s`; // Agrega el tiempo en segundos
             }
-        }
-    });
-</script>
+        });
+    </script>
 </body>
 </html>
