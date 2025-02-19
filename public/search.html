@@ -29,7 +29,9 @@
                 <li v-for="hit in results" class="mui-panel">
                     <strong>{{ hit._source.title }}</strong> - {{ hit._source.author }} <br>
                     📌 <span v-html="hit.highlight.text[0]"></span><br>
-                    🎥 <a :href="hit._source.url_youtube" target="_blank">Ver en YouTube</a>
+                    🎥 <a :href="getYouTubeTimestampedURL(hit._source.url_youtube, hit._source.text)" target="_blank">
+                        Ver en YouTube ⏳ ({{ extractTimestamp(hit._source.text) }})
+                    </a>
                 </li>
             </ul>
         </div>
@@ -70,6 +72,34 @@
                         .finally(() => {
                             this.loading = false;
                         });
+                },
+
+                /** Extraer el timestamp (hh:mm:ss) del texto del párrafo */
+                extractTimestamp(text) {
+                    const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+                    if (match) {
+                        return match[0]; // Devuelve el timestamp en formato hh:mm:ss o mm:ss
+                    }
+                    return "0:00"; // Si no encuentra nada, devuelve inicio del video
+                },
+
+                /** Convertir hh:mm:ss o mm:ss a segundos */
+                convertToSeconds(timestamp) {
+                    const parts = timestamp.split(":").map(Number);
+                    if (parts.length === 3) {
+                        return parts[0] * 3600 + parts[1] * 60 + parts[2]; // hh:mm:ss → segundos
+                    } else if (parts.length === 2) {
+                        return parts[0] * 60 + parts[1]; // mm:ss → segundos
+                    }
+                    return 0;
+                },
+
+                /** Generar la URL con el timestamp en YouTube */
+                getYouTubeTimestampedURL(url, text) {
+                    if (!url) return "#"; // Evita enlaces rotos
+                    const timestamp = this.extractTimestamp(text);
+                    const seconds = this.convertToSeconds(timestamp);
+                    return `${url.split("&")[0]}&t=${seconds}s`; // Agrega el tiempo en segundos
                 }
             }
         });
