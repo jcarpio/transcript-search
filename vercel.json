@@ -8,8 +8,20 @@
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/public/index.html"
+      "src": "/load-data",
+      "dest": "server/app.js"
+    },
+    {
+      "src": "/health",
+      "dest": "server/app.js"
+    },
+    {
+      "src": "/search",
+      "dest": "server/app.js"
+    },
+    {
+      "src": "/paragraphs",
+      "dest": "server/app.js"
     },
     {
       "src": "/(.*)",
