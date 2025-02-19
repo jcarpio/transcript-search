@@ -88,7 +88,7 @@
                         const resultHTML = `
                             <div class="result-card">
                                 <strong>${hit._source.title} - ${hit._source.author}</strong>
-                                <p>📌 ${formattedTime} ${highlight}</p>
+                                <p>📌 ${highlight}</p>
                                 <p>🎥 <a href="${hit._source.url_youtube}&t=${timestamp}s" target="_blank">Ver en YouTube ⏳ (${formattedTime})</a></p>
                             </div>
                         `;
