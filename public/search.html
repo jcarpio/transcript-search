@@ -8,36 +8,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
     <style>
-        /* 📌 Estilo para la cuadrícula de resultados */
-        .results-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-        }
-        .result-card {
-            flex: 1 1 calc(33.333% - 16px); /* 3 columnas en pantallas grandes */
-            max-width: 320px;
-            min-width: 280px;
-            padding: 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            transition: transform 0.2s;
-        }
-        .result-card:hover {
-            transform: scale(1.05);
-        }
-        @media (max-width: 768px) {
-            .result-card {
-                flex: 1 1 calc(50% - 16px); /* 2 columnas en pantallas medianas */
-            }
-        }
-        @media (max-width: 480px) {
-            .result-card {
-                flex: 1 1 100%; /* 1 columna en pantallas pequeñas */
-            }
-        }
+       .results-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+.result-card {
+    flex: 1 1 calc(25% - 16px); /* 4 columnas en pantallas grandes */
+    max-width: 280px;
+    min-width: 220px;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    transition: transform 0.2s;
+}
+.result-card:hover {
+    transform: scale(1.05);
+}
+@media (max-width: 1024px) {
+    .result-card {
+        flex: 1 1 calc(33.333% - 16px); /* 3 columnas en pantallas medianas */
+    }
+}
+@media (max-width: 768px) {
+    .result-card {
+        flex: 1 1 calc(50% - 16px); /* 2 columnas en pantallas pequeñas */
+    }
+}
+@media (max-width: 480px) {
+    .result-card {
+        flex: 1 1 100%; /* 1 columna en móviles */
+    }
+}
     </style>
 </head>
 <body>
@@ -79,85 +83,85 @@
         </div>
     </div>
 
-    <script>
-        new Vue({
-            el: "#app",
-            data: {
-                searchTerm: "",
-                results: [],
-                totalResults: 0,
-                loading: false,
-                offset: 0, // 📌 Control de paginación
-                resultsPerPage: 8 // 📌 Ahora muestra 9 resultados por página
-            },
-            methods: {
-                search(offset = 0) {
-                    if (!this.searchTerm.trim()) {
-                        alert("Por favor ingresa un término de búsqueda.");
-                        return;
-                    }
-
-                    this.loading = true;
-                    this.results = [];
-                    this.offset = offset; // 📌 Actualizar la paginación
-
-                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
-                        .then(response => {
-                            this.totalResults = response.data.total.value;
-                            this.results = response.data.hits;
-                        })
-                        .catch(error => {
-                            console.error("❌ Error en la búsqueda:", error);
-                            alert("Ocurrió un error al buscar. Intenta nuevamente.");
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
-                },
-
-                /** ⏮ Función para retroceder en la paginación */
-                prevPage() {
-                    if (this.offset > 0) {
-                        this.search(this.offset - this.resultsPerPage);
-                    }
-                },
-
-                /** ⏭ Función para avanzar en la paginación */
-                nextPage() {
-                    if (this.offset + this.resultsPerPage < this.totalResults) {
-                        this.search(this.offset + this.resultsPerPage);
-                    }
-                },
-
-                /** Extraer el timestamp (hh:mm:ss) del texto del párrafo */
-                extractTimestamp(text) {
-                    const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-                    if (match) {
-                        return match[0]; // Devuelve el timestamp en formato hh:mm:ss o mm:ss
-                    }
-                    return "0:00"; // Si no encuentra nada, devuelve inicio del video
-                },
-
-                /** Convertir hh:mm:ss o mm:ss a segundos */
-                convertToSeconds(timestamp) {
-                    const parts = timestamp.split(":").map(Number);
-                    if (parts.length === 3) {
-                        return parts[0] * 3600 + parts[1] * 60 + parts[2]; // hh:mm:ss → segundos
-                    } else if (parts.length === 2) {
-                        return parts[0] * 60 + parts[1]; // mm:ss → segundos
-                    }
-                    return 0;
-                },
-
-                /** Generar la URL con el timestamp en YouTube */
-                getYouTubeTimestampedURL(url, text) {
-                    if (!url) return "#"; // Evita enlaces rotos
-                    const timestamp = this.extractTimestamp(text);
-                    const seconds = this.convertToSeconds(timestamp);
-                    return `${url.split("&")[0]}&t=${seconds}s`; // Agrega el tiempo en segundos
+   <script>
+    new Vue({
+        el: "#app",
+        data: {
+            searchTerm: "",
+            results: [],
+            totalResults: 0,
+            loading: false,
+            offset: 0, // 📌 Control de paginación
+            resultsPerPage: 12 // 📌 Ahora muestra 12 resultados por página
+        },
+        methods: {
+            search(offset = 0) {
+                if (!this.searchTerm.trim()) {
+                    alert("Por favor ingresa un término de búsqueda.");
+                    return;
                 }
+
+                this.loading = true;
+                this.results = [];
+                this.offset = offset; // 📌 Actualizar la paginación
+
+                axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=${this.offset}`)
+                    .then(response => {
+                        this.totalResults = response.data.total.value;
+                        this.results = response.data.hits;
+                    })
+                    .catch(error => {
+                        console.error("❌ Error en la búsqueda:", error);
+                        alert("Ocurrió un error al buscar. Intenta nuevamente.");
+                    })
+                    .finally(() => {
+                        this.loading = false;
+                    });
+            },
+
+            /** ⏮ Función para retroceder en la paginación */
+            prevPage() {
+                if (this.offset > 0) {
+                    this.search(this.offset - this.resultsPerPage);
+                }
+            },
+
+            /** ⏭ Función para avanzar en la paginación */
+            nextPage() {
+                if (this.offset + this.resultsPerPage < this.totalResults) {
+                    this.search(this.offset + this.resultsPerPage);
+                }
+            },
+
+            /** Extraer el timestamp (hh:mm:ss) del texto del párrafo */
+            extractTimestamp(text) {
+                const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+                if (match) {
+                    return match[0]; // Devuelve el timestamp en formato hh:mm:ss o mm:ss
+                }
+                return "0:00"; // Si no encuentra nada, devuelve inicio del video
+            },
+
+            /** Convertir hh:mm:ss o mm:ss a segundos */
+            convertToSeconds(timestamp) {
+                const parts = timestamp.split(":").map(Number);
+                if (parts.length === 3) {
+                    return parts[0] * 3600 + parts[1] * 60 + parts[2]; // hh:mm:ss → segundos
+                } else if (parts.length === 2) {
+                    return parts[0] * 60 + parts[1]; // mm:ss → segundos
+                }
+                return 0;
+            },
+
+            /** Generar la URL con el timestamp en YouTube */
+            getYouTubeTimestampedURL(url, text) {
+                if (!url) return "#"; // Evita enlaces rotos
+                const timestamp = this.extractTimestamp(text);
+                const seconds = this.convertToSeconds(timestamp);
+                return `${url.split("&")[0]}&t=${seconds}s`; // Agrega el tiempo en segundos
             }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>
