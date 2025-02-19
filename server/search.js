@@ -21,9 +21,15 @@ module.exports = {
       console.log(`🔍 Buscando término: "${term}" con offset: ${offset}`);
 
       const response = await client.search({ index, body });
-      return response.body.hits;
+
+      // 🛠 Asegurar que la respuesta tiene 'hits'
+      if (!response || !response.hits) {
+        throw new Error('Elasticsearch no devolvió resultados válidos.');
+      }
+
+      return response.hits; // ✅ Retornamos solo los resultados
     } catch (error) {
-      console.error('❌ Error en la búsqueda:', error);
+      console.error('❌ Error en la búsqueda:', error.message);
       throw new Error('Error al realizar la búsqueda en Elasticsearch.');
     }
   },
@@ -45,9 +51,15 @@ module.exports = {
       console.log(`📖 Obteniendo párrafos de "${bookTitle}" de ${startLocation} a ${endLocation}`);
 
       const response = await client.search({ index, body });
-      return response.body.hits;
+
+      // 🛠 Asegurar que la respuesta tiene 'hits'
+      if (!response || !response.hits) {
+        throw new Error('Elasticsearch no devolvió resultados válidos.');
+      }
+
+      return response.hits;
     } catch (error) {
-      console.error('❌ Error al obtener párrafos:', error);
+      console.error('❌ Error al obtener párrafos:', error.message);
       throw new Error('Error al obtener párrafos en Elasticsearch.');
     }
   }
