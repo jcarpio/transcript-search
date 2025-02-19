@@ -1,68 +1,63 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador de Párrafos</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-        .result { border-bottom: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
-        .loading { font-style: italic; color: gray; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados de Búsqueda</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.14/vue.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+  <style>
+    body { padding: 20px; }
+    .highlight { background-color: yellow; font-weight: bold; }
+    .search-box { margin-bottom: 20px; }
+    .result-item { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+    .score { font-size: 12px; color: #777; }
+  </style>
 </head>
 <body>
-    <div id="app">
-        <h1>Buscador de Párrafos en Elasticsearch</h1>
-        <input v-model="searchTerm" type="text" placeholder="Introduce un término de búsqueda">
-        <button @click="search">Buscar</button>
 
-        <p v-if="loading" class="loading">Buscando...</p>
-        <p v-if="error" style="color: red;">{{ error }}</p>
+  <div id="app">
+    <h2>🔍 Buscador de Contenidos</h2>
 
-        <div v-if="results.length">
-            <h3>Resultados:</h3>
-            <div v-for="hit in results" class="result">
-                <strong>{{ hit._source.title }} - {{ hit._source.author }}</strong>
-                <p>{{ hit._source.text }}</p>
-            </div>
-        </div>
-        <p v-if="!loading && results.length === 0 && searchTerm">No se encontraron resultados.</p>
+    <!-- Barra de búsqueda -->
+    <div class="search-box">
+      <input type="text" v-model="searchTerm" placeholder="Ingrese término de búsqueda" @keyup.enter="performSearch">
+      <button @click="performSearch">Buscar</button>
     </div>
 
-    <script>
-        new Vue({
-            el: "#app",
-            data: {
-                searchTerm: "",
-                results: [],
-                loading: false,
-                error: null
-            },
-            methods: {
-                search() {
-                    if (!this.searchTerm.trim()) {
-                        this.error = "Por favor, introduce un término de búsqueda.";
-                        return;
-                    }
-                    this.error = null;
-                    this.loading = true;
+    <!-- Resultados -->
+    <div v-if="results.length">
+      <h4>📌 {{ results.length }} Resultados encontrados</h4>
+      <div v-for="result in results" :key="result._id" class="result-item">
+        <h3>{{ result._source.title }}</h3>
+        <p><strong>Autor:</strong> {{ result._source.author }}</p>
+        <p class="score">🔹 Score: {{ result._score }}</p>
+        <p v-html="result.highlight.text[0] || result._source.text"></p>
+        <p><a :href="result._source.url_youtube" target="_blank">🎥 Ver en YouTube</a></p>
+        <p><a :href="result._source.url_original" target="_blank">📄 Ver Original</a></p>
+      </div>
+    </div>
 
-                    axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`)
-                        .then(response => {
-                            this.results = response.data.hits.hits;
-                        })
-                        .catch(err => {
-                            this.error = "Error al buscar en Elasticsearch.";
-                            console.error(err);
-                        })
-                        .finally(() => {
-                            this.loading = false;
-                        });
-                }
-            }
-        });
-    </script>
+    <p v-else>⌛ Escriba un término y presione "Enter" para buscar.</p>
+  </div>
+
+  <script>
+    new Vue({
+      el: "#app",
+      data: {
+        searchTerm: "",
+        results: []
+      },
+      methods: {
+        async performSearch() {
+          if (!this.searchTerm) return;
+          const response = await axios.get(`/search?term=${encodeURIComponent(this.searchTerm)}&offset=0`);
+          this.results = response.data.hits.hits;
+        }
+      }
+    });
+  </script>
+
 </body>
 </html>
