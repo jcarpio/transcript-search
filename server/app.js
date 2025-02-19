@@ -1,29 +1,54 @@
-const Koa = require('koa')
-const Router = require('koa-router')
-const joi = require('joi')
-const validate = require('koa-joi-validate')
-const search = require('./search')
-const app = new Koa()
-const router = new Router()
+const Koa = require('koa');
+const Router = require('koa-router');
+const joi = require('joi');
+const validate = require('koa-joi-validate');
+const search = require('./search');
+const { checkConnection } = require('./connection');
+const loadData = require('./load_data');
+
+const app = new Koa();
+const router = new Router();
 
 // Log each request to the console
 app.use(async (ctx, next) => {
-  const start = Date.now()
-  await next()
-  const ms = Date.now() - start
-  console.log(`${ctx.method} ${ctx.url} - ${ms}`)
-})
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  console.log(`${ctx.method} ${ctx.url} - ${ms}ms`);
+});
 
 // Log percolated errors to the console
 app.on('error', err => {
-  console.error('Server Error', err)
-})
+  console.error('Server Error', err);
+});
 
 // Set permissive CORS header
 app.use(async (ctx, next) => {
-  ctx.set('Access-Control-Allow-Origin', '*')
-  return next()
-})
+  ctx.set('Access-Control-Allow-Origin', '*');
+  return next();
+});
+
+// Ruta para verificar la conexión con Elasticsearch
+router.get('/health', async (ctx) => {
+  try {
+    await checkConnection();
+    ctx.body = { success: true, message: 'Conectado a Elasticsearch' };
+  } catch (error) {
+    ctx.status = 500;
+    ctx.body = { success: false, error: error.message };
+  }
+});
+
+// Ruta para ejecutar `load_data.js` manualmente desde el navegador o API
+router.get('/load-data', async (ctx) => {
+  try {
+    await loadData();
+    ctx.body = { success: true, message: 'Datos cargados en Elasticsearch' };
+  } catch (error) {
+    ctx.status = 500;
+    ctx.body = { success: false, error: error.message };
+  }
+});
 
 /**
  * GET /search
@@ -39,11 +64,11 @@ router.get('/search',
       offset: joi.number().integer().min(0).default(0)
     }
   }),
-  async (ctx, next) => {
-    const { term, offset } = ctx.request.query
-    ctx.body = await search.queryTerm(term, offset)
+  async (ctx) => {
+    const { term, offset } = ctx.request.query;
+    ctx.body = await search.queryTerm(term, offset);
   }
-)
+);
 
 /**
  * GET /paragraphs
@@ -61,18 +86,20 @@ router.get('/paragraphs',
       end: joi.number().integer().greater(joi.ref('start')).default(10)
     }
   }),
-  async (ctx, next) => {
-    const { bookTitle, start, end } = ctx.request.query
-    ctx.body = await search.getParagraphs(bookTitle, start, end)
+  async (ctx) => {
+    const { bookTitle, start, end } = ctx.request.query;
+    ctx.body = await search.getParagraphs(bookTitle, start, end);
   }
-)
+);
 
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 3000;
 
 app
   .use(router.routes())
-  .use(router.allowedMethods())
-  .listen(port, err => {
-    if (err) console.error(err)
-    console.log(`App Listening on Port ${port}`)
-  })
+  .use(router.allowedMethods());
+
+app.listen(port, () => {
+  console.log(`Servidor ejecutándose en http://localhost:${port}`);
+});
+
+module.exports = app;
