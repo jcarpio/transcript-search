@@ -1,19 +1,19 @@
 const { Client } = require('@elastic/elasticsearch');
 
 // Verificar que las variables de entorno necesarias estén configuradas
-if (!process.env.CLOUD_ID || !process.env.ELASTIC_USERNAME || !process.env.ELASTIC_PASSWORD) {
-  console.error("❌ ERROR: Faltan variables de entorno de Elasticsearch.");
+if (!process.env.ELASTIC_NODE || !process.env.ELASTIC_API_KEY_ID || !process.env.ELASTIC_API_KEY) {
+  console.error("❌ ERROR: Faltan variables de entorno para la autenticación con API Key.");
   process.exit(1); // Detiene la ejecución si faltan credenciales
 }
 
-// Configuración del cliente de Elasticsearch en Elastic Cloud
+// Configurar la conexión con Elasticsearch usando API Key
 const client = new Client({
-  cloud: {
-    id: process.env.CLOUD_ID
-  },
+  node: process.env.ELASTIC_NODE,
   auth: {
-    username: process.env.ELASTIC_USERNAME,
-    password: process.env.ELASTIC_PASSWORD
+    apiKey: {
+      id: process.env.ELASTIC_API_KEY_ID,
+      api_key: process.env.ELASTIC_API_KEY
+    }
   }
 });
 
@@ -24,13 +24,13 @@ const type = '_doc';
 /** Verifica el estado de la conexión con Elasticsearch */
 async function checkConnection() {
   try {
-    console.log("🔍 Verificando conexión con Elasticsearch...");
+    console.log("🔍 Verificando conexión con Elasticsearch usando API Key...");
     const health = await client.cluster.health({});
     console.log("✅ Elasticsearch Health:", health);
     return true;
   } catch (err) {
     console.error("❌ Error de conexión con Elasticsearch:", err);
-    throw err; // Lanza el error para que sea registrado en logs
+    throw err;
   }
 }
 
