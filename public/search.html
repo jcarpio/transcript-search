@@ -1,4 +1,4 @@
-k<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -71,19 +71,29 @@ k<!DOCTYPE html>
             fetch(`/search?term=${encodeURIComponent(term)}&offset=${currentPage * resultsPerPage}`)
                 .then(res => res.json())
                 .then(data => {
-                    totalResults = data.total.value;
+                    if (!data || !data.total) {
+                        console.error("❌ Error: Respuesta de búsqueda inválida.", data);
+                        return;
+                    }
+
+                    totalResults = data.total; // Se asegura de que se obtenga el valor correcto
                     document.getElementById('totalResults').innerText = totalResults;
-                    document.getElementById('startResult').innerText = currentPage * resultsPerPage + 1;
+                    document.getElementById('startResult').innerText = Math.min(currentPage * resultsPerPage + 1, totalResults);
                     document.getElementById('endResult').innerText = Math.min((currentPage + 1) * resultsPerPage, totalResults);
                     
                     const resultsContainer = document.getElementById('results');
                     resultsContainer.innerHTML = '';
-                    
+
+                    if (!data.hits || data.hits.length === 0) {
+                        resultsContainer.innerHTML = "<p>No se encontraron resultados.</p>";
+                        return;
+                    }
+
                     data.hits.forEach(hit => {
                         const timestamp = extractTimestamp(hit._source.text);
                         const formattedTime = formatTime(timestamp);
                         
-                        const highlight = hit.highlight.text[0].replace(/<em>/g, '<strong>').replace(/<\/em>/g, '</strong>');
+                        const highlight = hit.highlight?.text?.[0]?.replace(/<em>/g, '<strong>').replace(/<\/em>/g, '</strong>') || hit._source.text;
                         
                         const resultHTML = `
                             <div class="result-card">
@@ -94,6 +104,9 @@ k<!DOCTYPE html>
                         `;
                         resultsContainer.innerHTML += resultHTML;
                     });
+                })
+                .catch(error => {
+                    console.error("❌ Error en la búsqueda:", error);
                 });
         }
         
@@ -136,4 +149,3 @@ k<!DOCTYPE html>
     </script>
 </body>
 </html>
-
