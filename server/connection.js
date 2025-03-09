@@ -1,18 +1,15 @@
 const { Client } = require('@elastic/elasticsearch');
 
 // Verificar que las variables de entorno necesarias estén configuradas
-if (!process.env.BONSAI_URL && (!process.env.BONSAI_USERNAME || !process.env.BONSAI_PASSWORD)) {
-  console.error("❌ ERROR: No se ha configurado correctamente la conexión a Bonsai.io.");
-  process.exit(1); // Detiene la ejecución si faltan credenciales
+if (!process.env.BONSAI_URL) {
+  console.error("❌ ERROR: La variable de entorno BONSAI_URL no está definida.");
+  process.exit(1);
 }
 
 // Configurar la conexión con Elasticsearch en Bonsai.io
 const client = new Client({
-  node: process.env.BONSAI_URL || `https://${process.env.BONSAI_USERNAME}:${process.env.BONSAI_PASSWORD}@your-cluster.bonsaisearch.net`,
-  auth: process.env.BONSAI_URL ? undefined : {
-    username: process.env.BONSAI_USERNAME,
-    password: process.env.BONSAI_PASSWORD
-  }
+  node: process.env.BONSAI_URL, // URL de conexión a Bonsai.io
+  ssl: { rejectUnauthorized: false } // Evita problemas con certificados SSL
 });
 
 // Nombre del índice
@@ -22,11 +19,11 @@ const index = 'library';
 async function checkConnection() {
   try {
     console.log("🔍 Verificando conexión con Bonsai.io...");
-    const health = await client.cluster.health({});
+    const health = await client.cluster.health();
     console.log("✅ Elasticsearch Health:", health);
     return true;
   } catch (err) {
-    console.error("❌ Error de conexión con Elasticsearch:", err);
+    console.error("❌ Error de conexión con Bonsai.io:", err);
     throw err;
   }
 }
