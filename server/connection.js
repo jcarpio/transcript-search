@@ -1,30 +1,27 @@
 const { Client } = require('@elastic/elasticsearch');
 
 // Verificar que las variables de entorno necesarias estén configuradas
-if (!process.env.ELASTIC_NODE || !process.env.ELASTIC_API_KEY_ID || !process.env.ELASTIC_API_KEY) {
-  console.error("❌ ERROR: Faltan variables de entorno para la autenticación con API Key.");
+if (!process.env.BONSAI_URL && (!process.env.BONSAI_USERNAME || !process.env.BONSAI_PASSWORD)) {
+  console.error("❌ ERROR: No se ha configurado correctamente la conexión a Bonsai.io.");
   process.exit(1); // Detiene la ejecución si faltan credenciales
 }
 
-// Configurar la conexión con Elasticsearch usando API Key
+// Configurar la conexión con Elasticsearch en Bonsai.io
 const client = new Client({
-  node: process.env.ELASTIC_NODE,
-  auth: {
-    apiKey: {
-      id: process.env.ELASTIC_API_KEY_ID,
-      api_key: process.env.ELASTIC_API_KEY
-    }
+  node: process.env.BONSAI_URL || `https://${process.env.BONSAI_USERNAME}:${process.env.BONSAI_PASSWORD}@your-cluster.bonsaisearch.net`,
+  auth: process.env.BONSAI_URL ? undefined : {
+    username: process.env.BONSAI_USERNAME,
+    password: process.env.BONSAI_PASSWORD
   }
 });
 
-// Nombre del índice y tipo de documento
+// Nombre del índice
 const index = 'library';
-const type = '_doc';
 
 /** Verifica el estado de la conexión con Elasticsearch */
 async function checkConnection() {
   try {
-    console.log("🔍 Verificando conexión con Elasticsearch usando API Key...");
+    console.log("🔍 Verificando conexión con Bonsai.io...");
     const health = await client.cluster.health({});
     console.log("✅ Elasticsearch Health:", health);
     return true;
@@ -78,5 +75,5 @@ async function putBookMapping() {
 }
 
 module.exports = {
-  client, index, type, checkConnection, resetIndex
+  client, index, checkConnection, resetIndex
 };
