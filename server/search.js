@@ -6,6 +6,7 @@ module.exports = {
     try {
       const body = {
         from: offset,
+        size: 9, // Asegurar que obtenemos exactamente 9 resultados por página
         query: {
           match: {
             text: {
@@ -19,17 +20,22 @@ module.exports = {
       };
 
       console.log("🔍 Consulta enviada a Elasticsearch:", JSON.stringify(body, null, 2));
- 
       console.log(`🔍 Buscando término: "${term}" con offset: ${offset}`);
 
       const response = await client.search({ index, body });
 
+      // 🛠 Ajuste para Elasticsearch 7: `hits.total` es un objeto, no un número.
+      const totalHits = typeof response.body.hits.total === 'object' ? response.body.hits.total.value : response.body.hits.total;
+
       // 🛠 Asegurar que la respuesta tiene 'hits'
-      if (!response || !response.hits) {
+      if (!response.body.hits || !response.body.hits.hits) {
         throw new Error('Elasticsearch no devolvió resultados válidos.');
       }
 
-      return response.hits; // ✅ Retornamos solo los resultados
+      return {
+        total: totalHits,
+        hits: response.body.hits.hits
+      };
     } catch (error) {
       console.error('❌ Error en la búsqueda:', error.message);
       throw new Error('Error al realizar la búsqueda en Elasticsearch.');
@@ -54,12 +60,18 @@ module.exports = {
 
       const response = await client.search({ index, body });
 
+      // 🛠 Ajuste para Elasticsearch 7: `hits.total` es un objeto, no un número.
+      const totalHits = typeof response.body.hits.total === 'object' ? response.body.hits.total.value : response.body.hits.total;
+
       // 🛠 Asegurar que la respuesta tiene 'hits'
-      if (!response || !response.hits) {
+      if (!response.body.hits || !response.body.hits.hits) {
         throw new Error('Elasticsearch no devolvió resultados válidos.');
       }
 
-      return response.hits;
+      return {
+        total: totalHits,
+        hits: response.body.hits.hits
+      };
     } catch (error) {
       console.error('❌ Error al obtener párrafos:', error.message);
       throw new Error('Error al obtener párrafos en Elasticsearch.');
