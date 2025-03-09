@@ -16,7 +16,7 @@
   },
   "homepage": "https://github.com/jcarpio/transcript-search/",
   "dependencies": {
-    "@elastic/elasticsearch": "^7.10.0",
+    "@elastic/elasticsearch": "7.10.0",
     "joi": "13.0.1",
     "koa": "2.4.1",
     "koa-static": "^5.0.0",
