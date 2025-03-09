@@ -24,17 +24,17 @@ module.exports = {
 
       const response = await client.search({ index, body });
 
-      // 🛠 Ajuste para Elasticsearch 7: `hits.total` puede ser un objeto o un número.
-      const totalHits = typeof response.hits.total === 'object' ? response.hits.total.value : response.hits.total;
+      // ✅ Ajuste para Elasticsearch 7: `hits.total` es un objeto, no un número.
+      const totalHits = response.body.hits.total?.value ?? response.body.hits.total;
 
       // 🛠 Asegurar que la respuesta tiene 'hits'
-      if (!response.hits || !response.hits.hits) {
+      if (!response.body.hits || !response.body.hits.hits) {
         throw new Error('Elasticsearch no devolvió resultados válidos.');
       }
 
       return {
         total: totalHits,
-        hits: response.hits.hits
+        hits: response.body.hits.hits
       };
     } catch (error) {
       console.error('❌ Error en la búsqueda:', error.message);
@@ -60,17 +60,17 @@ module.exports = {
 
       const response = await client.search({ index, body });
 
-      // 🛠 Ajuste para Elasticsearch 7: `hits.total` puede ser un objeto o un número.
-      const totalHits = typeof response.hits.total === 'object' ? response.hits.total.value : response.hits.total;
+      // ✅ Ajuste para Elasticsearch 7: `hits.total` es un objeto, no un número.
+      const totalHits = response.body.hits.total?.value ?? response.body.hits.total;
 
       // 🛠 Asegurar que la respuesta tiene 'hits'
-      if (!response.hits || !response.hits.hits) {
+      if (!response.body.hits || !response.body.hits.hits) {
         throw new Error('Elasticsearch no devolvió resultados válidos.');
       }
 
       return {
         total: totalHits,
-        hits: response.hits.hits
+        hits: response.body.hits.hits
       };
     } catch (error) {
       console.error('❌ Error al obtener párrafos:', error.message);
