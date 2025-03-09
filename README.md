@@ -1,18 +1,86 @@
-# Building a Full-Text Search App Using Docker and Elasticsearch
+# Transcript Search: Full-Text Search for Video and Podcast Transcriptions
 
-*How does Wikipedia sort though 5+ million articles to find the most relevant one for your research?*
+## Introduction
 
-*How does Facebook find the friend who you're looking for (and whose name you've misspelled), across a userbase of 2+ billion people?*
+This project is a full-text search engine designed to index and search transcriptions of videos and podcasts. It builds upon the original concept of a literary search engine and has been adapted to work with real-world spoken content.
 
-*How does Google search the entire internet for webpages relevant to your vague, typo-filled search query?*
+### Features:
+- 🔍 **Full-text search** across video and podcast transcriptions.
+- 🎥 **Direct timestamp links** to YouTube videos.
+- 📚 **Pagination support** for efficient browsing.
+- 🚀 **Deployed on Vercel** for a fast, serverless experience.
+- 🔎 **Powered by Bonsai Elasticsearch** for scalable search capabilities.
 
-In this tutorial, we'll walk through setting up our own full-text search application (of an admittedly lesser complexity than the systems in the questions above).  Our example app will provide a UI and API to search the complete texts of 100 literary classics such as *Peter Pan*, *Frankenstein*, and *Treasure Island*.
+## Deployment & Configuration
 
-You can preview a completed version of the tutorial app here - https://search.patricktriest.com
+### 1️⃣ Hosting on Vercel
 
-![preview webapp](https://cdn.patricktriest.com/blog/images/posts/elastic-library/sample_4_0.png)
+The frontend and backend are deployed using [Vercel](https://vercel.com/), which provides an easy-to-use serverless architecture.
 
-To read more, visit - https://blog.patricktriest.com/text-search-docker-elasticsearch/
+#### Steps to Deploy:
+1. **Clone the repository**
+   ```sh
+   git clone https://github.com/YOUR_GITHUB_USERNAME/transcript-search.git
+   cd transcript-search
+   ```
+2. **Install dependencies**
+   ```sh
+   npm install
+   ```
+3. **Set up environment variables** (Create a `.env` file in the root directory)
+   ```
+   ELASTIC_NODE=https://user:password@your-bonsai-elasticsearch-url
+
+   ```
+4. **Deploy to Vercel**
+   ```sh
+   vercel
+   ```
+
+### 2️⃣ Configuring Bonsai Elasticsearch
+
+We use [Bonsai Elasticsearch](https://bonsai.io/) as the search backend. This required adapting the Elasticsearch client to be compatible with version 7.x.
+
+#### Creating the Index
+To manually create the index, use:
+```sh
+curl -X PUT "https://your-bonsai-url/library" -H "Content-Type: application/json" -d '{
+  "settings": { "number_of_shards": 1 },
+  "mappings": { "properties": { "title": { "type": "keyword" }, "author": { "type": "keyword" }, "url_original": { "type": "keyword" }, "url_youtube": { "type": "keyword" }, "url_ivoox": { "type": "keyword" }, "location": { "type": "integer" }, "text": { "type": "text" } } }
+}'
+```
+
+### 3️⃣ Loading Transcriptions into Elasticsearch
+Transcriptions are stored in text files and indexed as paragraphs. To load data into Elasticsearch, we implemented an API endpoint:
+```sh
+GET /load-data
+```
+This script reads the text files, processes them into searchable chunks, and indexes them into Elasticsearch.
+
+### 4️⃣ Performing a Search
+The search endpoint is structured as follows:
+```sh
+GET /search?term=trading&offset=0
+```
+This will return a JSON response with:
+- The total number of matching results.
+- Up to 9 results per page (configurable).
+- Highlighted keywords in the transcriptions.
+- Direct YouTube links with timestamps.
+
+### 5️⃣ Search UI (Frontend)
+The frontend (`public/search.html`) is built with vanilla JavaScript and makes requests to the backend via Fetch API. The UI dynamically displays:
+- **Total results found**
+- **Pagination controls**
+- **Clickable links to video timestamps**
+
+## Future Improvements
+- ✅ Support for multiple search operators (e.g., exact match, fuzzy search, Boolean queries).
+- ✅ Automatic transcript processing and indexing from YouTube API.
+- ✅ Mobile-friendly responsive design.
+
+## Credits
+This project was adapted from the original Elasticsearch tutorial by [Patrick Triest](https://blog.patricktriest.com/text-search-docker-elasticsearch/) and extended to work with video and podcast transcriptions.
 
 ___
 
