@@ -18,6 +18,8 @@ module.exports = {
         highlight: { fields: { text: {} } }
       };
 
+      console.log("🔍 Consulta enviada a Elasticsearch:", JSON.stringify(body, null, 2));
+ 
       console.log(`🔍 Buscando término: "${term}" con offset: ${offset}`);
 
       const response = await client.search({ index, body });
