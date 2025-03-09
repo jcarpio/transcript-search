@@ -1,7 +1,5 @@
 const { Client } = require('@elastic/elasticsearch');
 
-console.log("🛠️ Versión de Elasticsearch instalada:", require('@elastic/elasticsearch/package.json').version);
-
 // Verificar que las variables de entorno necesarias estén configuradas
 if (!process.env.BONSAI_URL) {
   console.error("❌ ERROR: La variable de entorno BONSAI_URL no está definida.");
