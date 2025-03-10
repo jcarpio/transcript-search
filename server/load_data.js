@@ -43,14 +43,15 @@ function parseBookFile(filePath) {
   return { title, author, url_original, url_youtube, url_ivoox, paragraphs };
 }
 
-/** Insertar los libros en Elasticsearch sin `_type` (compatible con Elasticsearch 7+) */
-async function insertBookData(title, author, url_original, url_youtube, url_ivoox, paragraphs) {
+/** Insertar los libros en Elasticsearch con manejo de errores mejorado */
+async function insertBookData(title, author, url_original, url_youtube, url_ivoox, paragraphs, fileName) {
   let bulkOps = [];
+  let paragraphIndex = 0; // Contador para identificar el párrafo con error
 
   for (let i = 0; i < paragraphs.length; i++) {
-    // 📌 Eliminamos `_type` (que generaba el error)
-    bulkOps.push({ index: { _index: esConnection.index } });
+    paragraphIndex = i + 1; // Índice real del párrafo
 
+    bulkOps.push({ index: { _index: esConnection.index } });
     bulkOps.push({
       author,
       title,
@@ -63,20 +64,43 @@ async function insertBookData(title, author, url_original, url_youtube, url_ivoo
 
     if (i > 0 && i % 500 === 0) {
       console.log(`📤 Insertando párrafos ${i - 499} - ${i} en Elasticsearch...`);
-      await esConnection.client.bulk({ body: bulkOps });
+      try {
+        const response = await esConnection.client.bulk({ body: bulkOps });
+        handleBulkErrors(response, fileName, paragraphIndex, bulkOps);
+      } catch (err) {
+        console.error(`❌ Error crítico en archivo "${fileName}" en párrafo ${paragraphIndex}: ${err.message}`);
+      }
       bulkOps = [];
     }
   }
 
   if (bulkOps.length > 0) {
     console.log(`📤 Insertando últimos ${bulkOps.length / 2} párrafos...`);
-    await esConnection.client.bulk({ body: bulkOps });
+    try {
+      const response = await esConnection.client.bulk({ body: bulkOps });
+      handleBulkErrors(response, fileName, paragraphIndex, bulkOps);
+    } catch (err) {
+      console.error(`❌ Error crítico en archivo "${fileName}" en párrafo ${paragraphIndex}: ${err.message}`);
+    }
   }
 
   console.log(`✅ Libro "${title}" indexado completamente en Elasticsearch.\n`);
 }
 
-/** Leer y cargar todos los libros en Elasticsearch */
+/** ✅ Manejo de errores detallado en la indexación */
+function handleBulkErrors(response, fileName, paragraphIndex, bulkOps) {
+  if (response.errors) {
+    console.error(`❌ Error en la indexación del archivo "${fileName}", párrafo ${paragraphIndex}`);
+    response.items.forEach((item, idx) => {
+      if (item.index && item.index.error) {
+        console.error(`❌ Error en documento ${paragraphIndex - (bulkOps.length / 2) + idx + 1}: ${item.index.error.reason}`);
+        console.error(`📌 Párrafo problemático: "${bulkOps[idx * 2 + 1].text}"`);
+      }
+    });
+  }
+}
+
+/** Leer y cargar todos los libros en Elasticsearch con logs mejorados */
 async function readAndInsertBooks() {
   await esConnection.checkConnection();
 
@@ -93,7 +117,7 @@ async function readAndInsertBooks() {
       console.log(`📖 Procesando archivo: ${file}`);
       const filePath = path.join(BOOKS_DIR, file);
       const { title, author, url_original, url_youtube, url_ivoox, paragraphs } = parseBookFile(filePath);
-      await insertBookData(title, author, url_original, url_youtube, url_ivoox, paragraphs);
+      await insertBookData(title, author, url_original, url_youtube, url_ivoox, paragraphs, file);
     }
 
     console.log("✅ Todos los libros han sido indexados en Elasticsearch.");
