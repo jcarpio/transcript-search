@@ -16,41 +16,60 @@ function checkBooksDirectory() {
 function parseBookFile(filePath) {
   const book = fs.readFileSync(filePath, 'utf8');
 
-  // Extraer metadatos
-const titleMatch = book.match(/^Title:\s(.+)$/m);
-const authorMatch = book.match(/^Author:\s(.+)$/m);
-const urlYoutubeMatch = book.match(/^Url Youtube:\s(.+)$/m);
-const urlOriginalMatch = book.match(/^Url Original:\s(.+)$/m);
-const urlIvooxMatch = book.match(/^Url Ivoox:\s(.+)$/m);
+  console.log(`📖 Leyendo archivo: ${filePath}`);
 
-if (!titleMatch || !urlOriginalMatch) {
-    console.error(`❌ ERROR en archivo ${filePath}: No se pudieron extraer algunos metadatos. titleMatch: ${titleMatch}, urlYoutubeMatch: ${urlYoutubeMatch}, urlOriginalMatch: ${urlOriginalMatch}, urlIvooxMatch: ${urlIvooxMatch}`);
-    console.error(`📌 titleMatch: ${titleMatch}, urlYoutubeMatch: ${urlYoutubeMatch}, urlOriginalMatch: ${urlOriginalMatch}, urlIvooxMatch: ${urlIvooxMatch}`);
-    throw new Error(`Faltan metadatos en el archivo: ${filePath}`);
-}
+  // Dividir el archivo en líneas
+  const lines = book.split('\n');
 
-const title = titleMatch[1];
-const url_youtube = urlYoutubeMatch[1].trim();
-const url_original = urlOriginalMatch[1].trim();
-const url_ivoox = urlIvooxMatch[1].trim();
-const author = (!authorMatch || authorMatch[1].trim() === '') ? 'Unknown Author' : authorMatch[1];
+  // Imprimir las primeras 20 líneas del archivo para depuración
+  console.log("📌 Primeras 20 líneas del archivo:");
+  for (let i = 0; i < Math.min(20, lines.length); i++) {
+      console.log(`${i + 1}: ${lines[i]}`);
+  }
 
-  console.log(`📖 Leyendo libro: ${title} | Autor: ${author} | YouTube: ${url_youtube}`);
+  // Extraer metadatos con validaciones
+  function extractMetadata(regex, name) {
+      const match = book.match(regex);
+      if (!match || !match[1]) {
+          console.error(`❌ ERROR: No se pudo extraer "${name}" en archivo: ${filePath}`);
+          throw new Error(`Faltan metadatos (${name}) en archivo: ${filePath}`);
+      }
+      return match[1].trim();
+  }
+
+  const title = extractMetadata(/^Title:\s(.+)$/m, "Title");
+  const author = extractMetadata(/^Author:\s(.+)$/m, "Author");
+  const url_youtube = extractMetadata(/^Url Youtube:\s(.+)$/m, "Url Youtube");
+  const url_original = extractMetadata(/^Url Original:\s(.+)$/m, "Url Original");
+  const url_ivoox = extractMetadata(/^Url Ivoox:\s(.+)$/m, "Url Ivoox");
+
+  console.log(`✅ Metadatos extraídos correctamente para: ${title}`);
 
   // Buscar contenido del libro
   const startOfBookMatch = book.match(/^\*{3}\s*START OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m);
+  const endOfBookMatch = book.match(/^\*{3}\s*END OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m);
+
+  if (!startOfBookMatch || !endOfBookMatch) {
+      console.error(`❌ ERROR: No se encontraron los marcadores de inicio/fin en ${filePath}`);
+      throw new Error(`Formato incorrecto en ${filePath}`);
+  }
+
   const startOfBookIndex = startOfBookMatch.index + startOfBookMatch[0].length;
-  const endOfBookIndex = book.match(/^\*{3}\s*END OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m).index;
+  const endOfBookIndex = endOfBookMatch.index;
 
-  // Dividir en párrafos
+  // Dividir en párrafos y mostrar el primero para depuración
   const paragraphs = book
-    .slice(startOfBookIndex, endOfBookIndex)
-    .split(/\n\s+\n/g)
-    .map(line => line.replace(/\r\n/g, ' ').trim())
-    .map(line => line.replace(/_/g, ''))
-    .filter((line) => (line && line !== ''));
+      .slice(startOfBookIndex, endOfBookIndex)
+      .split(/\n\s*\n/g)
+      .map(line => line.replace(/\r\n/g, ' ').trim())
+      .map(line => line.replace(/_/g, ''))
+      .filter(line => line && line !== '');
 
-  console.log(`📌 Procesados ${paragraphs.length} párrafos\n`);
+  console.log(`📌 Se encontraron ${paragraphs.length} párrafos en "${title}"`);
+  if (paragraphs.length > 0) {
+      console.log(`📖 Primer párrafo: ${paragraphs[0]}`);
+  }
+
   return { title, author, url_original, url_youtube, url_ivoox, paragraphs };
 }
 
