@@ -23,8 +23,8 @@ const urlYoutubeMatch = book.match(/^Url Youtube:\s(.+)$/m);
 const urlOriginalMatch = book.match(/^Url Original:\s(.+)$/m);
 const urlIvooxMatch = book.match(/^Url Ivoox:\s(.+)$/m);
 
-if (!titleMatch || !urlYoutubeMatch || !urlOriginalMatch || !urlIvooxMatch) {
-    console.error(`❌ ERROR en archivo ${filePath}: No se pudieron extraer algunos metadatos.`);
+if (!titleMatch || !urlOriginalMatch) {
+    console.error(`❌ ERROR en archivo ${filePath}: No se pudieron extraer algunos metadatos. titleMatch: ${titleMatch}, urlYoutubeMatch: ${urlYoutubeMatch}, urlOriginalMatch: ${urlOriginalMatch}, urlIvooxMatch: ${urlIvooxMatch}`);
     console.error(`📌 titleMatch: ${titleMatch}, urlYoutubeMatch: ${urlYoutubeMatch}, urlOriginalMatch: ${urlOriginalMatch}, urlIvooxMatch: ${urlIvooxMatch}`);
     throw new Error(`Faltan metadatos en el archivo: ${filePath}`);
 }
