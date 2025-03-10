@@ -17,12 +17,23 @@ function parseBookFile(filePath) {
   const book = fs.readFileSync(filePath, 'utf8');
 
   // Extraer metadatos
-  const title = book.match(/^Title:\s(.+)$/m)[1];
-  const authorMatch = book.match(/^Author:\s(.+)$/m);
-  const url_youtube = book.match(/^Url Youtube:\s(.+)$/m)[1].trim();
-  const url_original = book.match(/^Url Original:\s(.+)$/m)[1].trim();
-  const url_ivoox = book.match(/^Url Ivoox:\s(.+)$/m)[1].trim();
-  const author = (!authorMatch || authorMatch[1].trim() === '') ? 'Unknown Author' : authorMatch[1];
+const titleMatch = book.match(/^Title:\s(.+)$/m);
+const authorMatch = book.match(/^Author:\s(.+)$/m);
+const urlYoutubeMatch = book.match(/^Url Youtube:\s(.+)$/m);
+const urlOriginalMatch = book.match(/^Url Original:\s(.+)$/m);
+const urlIvooxMatch = book.match(/^Url Ivoox:\s(.+)$/m);
+
+if (!titleMatch || !urlYoutubeMatch || !urlOriginalMatch || !urlIvooxMatch) {
+    console.error(`❌ ERROR en archivo ${filePath}: No se pudieron extraer algunos metadatos.`);
+    console.error(`📌 titleMatch: ${titleMatch}, urlYoutubeMatch: ${urlYoutubeMatch}, urlOriginalMatch: ${urlOriginalMatch}, urlIvooxMatch: ${urlIvooxMatch}`);
+    throw new Error(`Faltan metadatos en el archivo: ${filePath}`);
+}
+
+const title = titleMatch[1];
+const url_youtube = urlYoutubeMatch[1].trim();
+const url_original = urlOriginalMatch[1].trim();
+const url_ivoox = urlIvooxMatch[1].trim();
+const author = (!authorMatch || authorMatch[1].trim() === '') ? 'Unknown Author' : authorMatch[1];
 
   console.log(`📖 Leyendo libro: ${title} | Autor: ${author} | YouTube: ${url_youtube}`);
 
