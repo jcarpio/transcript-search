@@ -27,6 +27,58 @@ function parseBookFile(filePath) {
       console.log(`${i + 1}: ${lines[i]}`);
   }
 
+  // Extraer metadatos con validaciones (solo los obligatorios generan error si faltan)
+  function extractMetadata(regex, name, isOptional = false, defaultValue = '') {
+      const match = book.match(regex);
+      if (!match || !match[1]) {
+          if (isOptional) {
+              console.warn(`⚠️ Advertencia: No se encontró "${name}". Se usará: "${defaultValue}"`);
+              return defaultValue;
+          }
+          console.error(`❌ ERROR: No se pudo extraer "${name}" en archivo: ${filePath}`);
+          throw new Error(`Faltan metadatos (${name}) en archivo: ${filePath}`);
+      }
+      return match[1].trim();
+  }
+
+  // Campos obligatorios
+  const title = extractMetadata(/^Title:\s(.+)$/m, "Title");
+  const author = extractMetadata(/^Author:\s(.+)$/m, "Author");
+
+  // Campos opcionales (se asignan valores predeterminados si no están)
+  const url_youtube = extractMetadata(/^Url Youtube:\s(.+)$/m, "Url Youtube", true, "N/A");
+  const url_original = extractMetadata(/^Url Original:\s(.+)$/m, "Url Original", true, "N/A");
+  const url_ivoox = extractMetadata(/^Url Ivoox:\s(.+)$/m, "Url Ivoox", true, "N/A");
+
+  console.log(`✅ Metadatos extraídos correctamente para: ${title}`);
+
+  // Buscar contenido del libro
+  const startOfBookMatch = book.match(/^\*{3}\s*START OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m);
+  const endOfBookMatch = book.match(/^\*{3}\s*END OF (THIS|THE) PROJECT GUTENBERG EBOOK.+\*{3}$/m);
+
+  if (!startOfBookMatch || !endOfBookMatch) {
+      console.error(`❌ ERROR: No se encontraron los marcadores de inicio/fin en ${filePath}`);
+      throw new Error(`Formato incorrecto en ${filePath}`);
+  }
+
+  const startOfBookIndex = startOfBookMatch.index + startOfBookMatch[0].length;
+  const endOfBookIndex = endOfBookMatch.index;
+
+  // Dividir en párrafos y mostrar el primero para depuración
+  const paragraphs = book
+      .slice(startOfBookIndex, endOfBookIndex)
+      .split(/\n\s*\n/g)
+      .map(line => line.replace(/\r\n/g, ' ').trim())
+      .map(line => line.replace(/_/g, ''))
+      .filter(line => line && line !== '');
+
+  console.log(`📌 Se encontraron ${paragraphs.length} párrafos en "${title}"`);
+  if (paragraphs.length > 0) {
+      console.log(`📖 Primer párrafo: ${paragraphs[0]}`);
+  }
+
+  return { title, author, url_original, url_youtube, url_ivoox, paragraphs };
+}
   // Extraer metadatos con validaciones
   function extractMetadata(regex, name) {
       const match = book.match(regex);
